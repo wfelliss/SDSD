@@ -1,135 +1,233 @@
-# Turborepo starter
+# Full-Stack Application
 
-This Turborepo starter is maintained by the Turborepo core team.
+A modern full-stack application built with Remix, NestJS, PostgreSQL, and Turborepo.
 
-## Using this example
+## 🚀 Quick Start
 
-Run the following command:
+### Prerequisites
 
-```sh
-npx create-turbo@latest
+- [Bun](https://bun.sh/) (recommended) or Node.js 18+
+- [Docker](https://www.docker.com/) for PostgreSQL
+- Git
+
+### 1. Clone the Repository
+
+```bash
+git clone git@github.com:wfelliss/SDSD.git
+cd SDSD
 ```
 
-## What's inside?
+### 2. Install Dependencies
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```bash
+bun install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### 3. Start PostgreSQL Database
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+```bash
+# Start PostgreSQL with Docker Compose
+docker-compose up -d
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+# Or run PostgreSQL directly
+docker run --name postgres-dev \
+  -e POSTGRES_DB=nestjs_app \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=password \
+  -p 5432:5432 \
+  -d postgres:15
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+# To stop the database later:
+docker-compose down
+# Or: docker stop postgres-dev && docker rm postgres-dev
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### 4. Set Up Backend Environment
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+```bash
+# Copy environment file
+cp apps/backend/.env.example apps/backend/.env
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+# Generate and run database migrations
+cd apps/backend
+bun run db:generate
+bun run db:migrate
 
-### Remote Caching
+# Optional: Seed database with test data
+bun run seed
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+cd ../..
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### 5. Start Development Servers
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+```bash
+# Start both frontend and backend
+bun run dev
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+# Or start individually:
+# bun run dev --filter=frontend  # Frontend only
+# bun run dev --filter=backend   # Backend only
 ```
 
-## Useful Links
+### 6. Open Your Application
 
-Learn more about the power of Turborepo:
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:3001/api](http://localhost:3001/api)
+- **Database**: PostgreSQL on port 5432
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+## 🏗️ What's Inside?
+
+This Turborepo includes the following apps and packages:
+
+### Apps
+
+- **`frontend`**: [Remix](https://remix.run/) app with [Tailwind CSS](https://tailwindcss.com/)
+- **`backend`**: [NestJS](https://nestjs.com/) API with [Drizzle ORM](https://orm.drizzle.team/)
+
+### Packages
+
+- **`@repo/ui`**: Shared React component library
+- **`@repo/eslint-config`**: ESLint configurations
+- **`@repo/typescript-config`**: TypeScript configurations
+
+### Tech Stack
+
+- **Frontend**: Remix + React 19 + Tailwind CSS
+- **Backend**: NestJS + TypeScript
+- **Database**: PostgreSQL + Drizzle ORM
+- **Monorepo**: Turborepo
+- **Package Manager**: Bun
+- **Styling**: Tailwind CSS with design system
+- **Dev Tools**: TypeScript, ESLint, Prettier
+
+## 📋 API Endpoints
+
+### Health Check
+
+- `GET /api` - Hello from backend
+- `GET /api/health` - Service health status
+
+### Users
+
+- `GET /api/users` - Get all users
+- `GET /api/users/:id` - Get user by ID
+- `POST /api/users` - Create new user
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
+
+## 🛠️ Development
+
+### Available Scripts
+
+```bash
+# Development
+bun run dev                    # Start all apps
+bun run dev --filter=frontend # Frontend only
+bun run dev --filter=backend  # Backend only
+
+# Building
+bun run build                 # Build all apps
+bun run build --filter=frontend
+bun run build --filter=backend
+
+# Database
+cd apps/backend
+bun run db:generate          # Generate migrations
+bun run db:migrate           # Run migrations
+bun run db:studio            # Open Drizzle Studio
+bun run seed                 # Seed test data
+
+# Linting & Type Checking
+bun run lint                 # Lint all packages
+bun run check-types          # Type check all packages
+```
+
+### Project Structure
+
+```
+apps/
+├── frontend/                # Remix frontend
+│   ├── app/
+│   │   ├── routes/         # Remix routes
+│   │   ├── root.tsx        # Root component
+│   │   └── tailwind.css    # Tailwind styles
+│   ├── public/             # Static assets
+│   └── vite.config.ts      # Vite config with API proxy
+│
+├── backend/                # NestJS backend
+│   ├── src/
+│   │   ├── database/       # Database schema & connection
+│   │   ├── users/          # Users module
+│   │   └── main.ts         # Application entry
+│   ├── drizzle/            # Generated migrations
+│   └── drizzle.config.ts   # Drizzle configuration
+│
+packages/
+├── ui/                     # Shared React components
+├── eslint-config/          # ESLint configurations
+└── typescript-config/      # TypeScript configurations
+```
+
+## 🐳 Docker Support
+
+The project includes Docker Compose for PostgreSQL:
+
+```bash
+# Start PostgreSQL
+docker-compose up -d
+
+# Stop PostgreSQL
+docker-compose down
+
+# View logs
+docker-compose logs postgres
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Backend (`.env` in `apps/backend/`):
+
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/nestjs_app
+PORT=3002
+NODE_ENV=development
+```
+
+### API Proxy
+
+The frontend automatically proxies `/api/*` requests to the backend server. This is configured in `apps/frontend/vite.config.ts`.
+
+## 🚀 Deployment
+
+### Frontend (Remix)
+
+- Deploy to [Vercel](https://vercel.com/), [Netlify](https://netlify.com/), or any Node.js hosting
+- Supports server-side rendering and static generation
+
+### Backend (NestJS)
+
+- Deploy to [Railway](https://railway.app/), [Render](https://render.com/), or any Node.js hosting
+- Requires PostgreSQL database (use managed services like [Supabase](https://supabase.com/) or [Neon](https://neon.tech/))
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📚 Learn More
+
+- [Remix Documentation](https://remix.run/docs)
+- [NestJS Documentation](https://docs.nestjs.com/)
+- [Drizzle ORM Documentation](https://orm.drizzle.team/)
+- [Turborepo Documentation](https://turborepo.org/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
