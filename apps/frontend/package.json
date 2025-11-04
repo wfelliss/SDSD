@@ -1,0 +1,37 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "build": "remix vite:build",
+    "dev": "remix vite:dev --port 3000",
+    "start": "remix-serve ./build/server/index.js",
+    "lint": "eslint --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remix-run/node": "^2.13.1",
+    "@remix-run/react": "^2.13.1",
+    "@remix-run/serve": "^2.13.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.1.0",
+    "isbot": "^5.1.22"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^2.13.1",
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.15.3",
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.38.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "5.9.2",
+    "vite": "^6.0.1",
+    "vite-tsconfig-paths": "^5.1.2"
+  }
+}
