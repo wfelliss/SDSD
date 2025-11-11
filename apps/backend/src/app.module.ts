@@ -5,6 +5,7 @@ import { AppService } from "./app.service";
 import { DatabaseModule } from "./database/database.module";
 import { UsersModule } from "./users/users.module";
 import { RunsModule } from "./runs/runs.module";
+import { S3Module } from "./s3/s3.module";
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { RunsModule } from "./runs/runs.module";
     }),
     DatabaseModule,
     UsersModule,
-    RunsModule
+    RunsModule,
+    S3Module
   ],
   controllers: [AppController],
   providers: [AppService],
