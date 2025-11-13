@@ -4,10 +4,12 @@ import {
   S3Client,
   GetObjectCommand,
   ListObjectsV2Command,
+  HeadObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Upload } from '@aws-sdk/lib-storage';
 
 @Injectable()
 export class S3Service {
@@ -33,6 +35,28 @@ export class S3Service {
     this.logger.log(
       `S3Service initialized with bucket: ${this.bucket} in region: ${this.region}`,
     );
+  }
+
+  /**
+   * Check whether an object exists in the bucket using HeadObject.
+   */
+  async objectExists(key: string): Promise<boolean> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+      return true;
+    } catch (err: any) {
+      // If the object is not found, S3 returns a 404; surface other errors
+      const status = err?.$metadata?.httpStatusCode || err?.statusCode;
+      if (status === 404) return false;
+      // Some SDK errors use Code or name
+      if (err?.name === 'NotFound' || err?.Code === 'NotFound') return false;
+      throw err;
+    }
   }
 
   /**
@@ -95,16 +119,56 @@ export class S3Service {
    */
   async uploadFile(key: string, data: Buffer | string): Promise<void> {
     try {
-      const command = new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: typeof data === 'string' ? Buffer.from(data) : data,
-      });
+      const body = typeof data === 'string' ? Buffer.from(data) : data;
 
-      await this.s3Client.send(command);
+      // For large buffers use multipart Upload to avoid memory limits and to support large files
+      const MULTIPART_THRESHOLD = 5 * 1024 * 1024; // 5MB
+      if (Buffer.isBuffer(body) && body.length >= MULTIPART_THRESHOLD) {
+        const upload = new Upload({
+          client: this.s3Client,
+          params: {
+            Bucket: this.bucket,
+            Key: key,
+            Body: body,
+          },
+        });
+
+        await upload.done();
+      } else {
+        const command = new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: body,
+        });
+
+        await this.s3Client.send(command);
+      }
       this.logger.log(`File ${key} uploaded successfully`);
     } catch (error) {
       this.logger.error(`Error uploading file ${key} to S3:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload a Buffer (streamed/multipart) to S3 using the higher-level Upload helper.
+   */
+  async uploadBuffer(key: string, buffer: Buffer, contentType = 'application/octet-stream') {
+    try {
+      const upload = new Upload({
+        client: this.s3Client,
+        params: {
+          Bucket: this.bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: contentType,
+        },
+      });
+
+      await upload.done();
+      this.logger.log(`Buffer uploaded to ${key} successfully`);
+    } catch (error) {
+      this.logger.error(`Error uploading buffer ${key} to S3:`, error);
       throw error;
     }
   }
@@ -115,7 +179,15 @@ export class S3Service {
   async uploadJson(key: string, data: any): Promise<void> {
     try {
       const jsonString = JSON.stringify(data, null, 2);
-      await this.uploadFile(key, jsonString);
+      // Use PutObjectCommand directly so we can set ContentType for JSON
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: Buffer.from(jsonString),
+        ContentType: 'application/json',
+      });
+
+      await this.s3Client.send(command);
     } catch (error) {
       this.logger.error(`Error uploading JSON file ${key} to S3:`, error);
       throw error;

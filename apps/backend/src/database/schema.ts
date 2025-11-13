@@ -16,6 +16,7 @@ export const runs = pgTable("runs", {
   id: serial("id").primaryKey(),
 
   srcPath: text("src_path").notNull(),   // e.g. file path to source
+  title: varchar("title", { length: 255 }),
   comments: text("comments"),            // optional notes
   length: integer("length").notNull(),   // e.g. number of samples, seconds, etc.
   date: timestamp("date").defaultNow().notNull(),  // run date/time
