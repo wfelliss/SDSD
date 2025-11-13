@@ -115,8 +115,8 @@ async function seed() {
   ];
 
   for (const runItem of initialRuns) {
-    try {
-      await db.insert(runs).values({
+    await db.insert(runs)
+      .values({
         srcPath: runItem.srcPath,
         title: runItem.title ?? null,
         comments: runItem.comments ?? null,
@@ -124,12 +124,10 @@ async function seed() {
         date: runItem.date ? new Date(runItem.date) : new Date(),
         location: runItem.location ?? null,
         createdAt: runItem.createdAt ? new Date(runItem.createdAt) : new Date(),
-      });
+      })
+      .onConflictDoNothing(); // ← ignores duplicates automatically
 
-      console.log(`✅ Created run: ${runItem.title}`);
-    } catch (error) {
-      console.log(`⚠️  Run ${runItem.title} might already exist or failed to insert`, error);
-    }
+    console.log(`✅ Processed run: ${runItem.title}`);
   }
 
   console.log("🎉 Seeding completed!");

@@ -15,7 +15,7 @@ export type NewUser = typeof users.$inferInsert;
 export const runs = pgTable("runs", {
   id: serial("id").primaryKey(),
 
-  srcPath: text("src_path").notNull(),   // e.g. file path to source
+  srcPath: varchar("src_path", { length: 1024 }).notNull().unique(),   // e.g. file path to source
   title: varchar("title", { length: 255 }),
   comments: text("comments"),            // optional notes
   length: integer("length").notNull(),   // e.g. number of samples, seconds, etc.

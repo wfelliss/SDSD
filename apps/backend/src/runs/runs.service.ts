@@ -16,6 +16,11 @@ export class RunsService {
         return result[0] ?? null;
     }
 
+    async findBySrcPath(srcPath: string) {
+        const result = await this.db.select().from(runs).where(eq(runs.srcPath, srcPath));
+        return result[0] ?? null;
+    }
+
     async createRun(data: {
     srcPath: string;
     comments?: string;
@@ -23,6 +28,12 @@ export class RunsService {
     date?: Date;
     location?: string;
     }) {
+    // enforce uniqueness at service level to avoid duplicate runs
+    const existing = await this.findBySrcPath(data.srcPath);
+    if (existing) {
+        throw new Error('Run with this srcPath already exists');
+    }
+
     const inserted = await this.db.insert(runs).values({
         ...data,
         date: data.date ?? new Date(), // default to now if not provided

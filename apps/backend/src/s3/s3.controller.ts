@@ -84,13 +84,27 @@ export class S3Controller {
     const initialKey = metadata?.key || `run_data/${datePart}/${encodeURIComponent(String(runName))}`;
 
     try {
-      // ensure we don't overwrite an existing object
+      const bucket = this.configService.get<string>('AWS_S3_BUCKET');
+      const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
+
+      // build the would-be S3 URL for the initial key so we can check DB uniqueness
+      const initialS3Url = `https://${bucket}.s3.${region}.amazonaws.com/${initialKey}`;
+
+      // if a run already exists with this srcPath, do not create/upload a new run
+      const existing = await this.runsService.findBySrcPath(initialS3Url);
+      if (existing) {
+        return {
+          success: false,
+          error: 'A run with this srcPath already exists',
+          existingRun: existing,
+        };
+      }
+
+      // ensure we don't overwrite an existing object in S3; this may append a suffix
       const key = await this.ensureUniqueKey(initialKey);
 
       await this.s3Service.uploadBuffer(key, file.buffer, file.mimetype || 'application/octet-stream');
 
-      const bucket = this.configService.get<string>('AWS_S3_BUCKET');
-      const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
       const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
       // Map metadata to DB fields
@@ -108,7 +122,26 @@ export class S3Controller {
         location: metadata?.location ?? null,
       };
 
-      const created = await this.runsService.createRun(runData as any);
+      let created;
+      try {
+        created = await this.runsService.createRun(runData as any);
+      } catch (err) {
+        // if DB insert fails, remove the uploaded S3 object to avoid orphaned files
+        try {
+          await this.s3Service.deleteFile(key);
+        } catch (delErr) {
+          // swallow deletion error but include info in response
+          return {
+            success: false,
+            error: `Run creation failed: ${(err as Error).message}; additionally failed to delete uploaded S3 object: ${(delErr as Error).message}`,
+          };
+        }
+
+        return {
+          success: false,
+          error: `Run creation failed: ${(err as Error).message}`,
+        };
+      }
 
       return {
         success: true,
