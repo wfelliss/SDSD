@@ -12,6 +12,7 @@ export default function Index() {
   const [number, setNumber] = useState(0);
   const [apiResponse, setApiResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [s3Prefix, setS3Prefix] = useState("");
 
   const testApi = async () => {
     setLoading(true);
@@ -21,6 +22,22 @@ export default function Index() {
       setApiResponse(text);
     } catch (error) {
       setApiResponse("API Error: " + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const listS3Files = async () => {
+    setLoading(true);
+    try {
+      const url = s3Prefix
+        ? `/api/s3/list?prefix=${encodeURIComponent(s3Prefix)}`
+        : "/api/s3/list";
+      const response = await fetch(url);
+      const data = await response.json();
+      setApiResponse(JSON.stringify(data, null, 2));
+    } catch (error) {
+      setApiResponse("S3 Error: " + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -41,7 +58,7 @@ export default function Index() {
         </header>
 
         {/* Button Demo Section */}
-        <div className="flex justify-center gap-4 mb-12">
+        <div className="flex justify-center gap-4 mb-12 flex-wrap">
           <button
             className="btn-primary px-6 py-2"
             onClick={() => setNumber(number + 1)}
@@ -56,6 +73,25 @@ export default function Index() {
           >
             {loading ? "Testing..." : "Test API"}
           </button>
+
+          <button
+            className="btn-secondary px-6 py-2"
+            onClick={listS3Files}
+            disabled={loading}
+          >
+            {loading ? "Loading..." : "List S3 Files"}
+          </button>
+        </div>
+
+        {/* S3 Prefix Input */}
+        <div className="mb-12 max-w-2xl mx-auto">
+          <input
+            type="text"
+            placeholder="Enter S3 prefix (optional)"
+            value={s3Prefix}
+            onChange={(e) => setS3Prefix(e.target.value)}
+            className="w-full px-4 py-2 border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500"
+          />
         </div>
 
         {/* API Response Section */}
