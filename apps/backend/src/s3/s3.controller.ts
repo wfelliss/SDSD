@@ -61,27 +61,35 @@ export class S3Controller {
   }
 
   /**
-   * Accept multipart/form-data file upload (field `file`) and metadata (optional `metadata` JSON string).
-   * This endpoint streams the file buffer to S3 using multipart upload and creates a DB run record.
+   * Accept multipart/form-data file upload (field `file`).
+   * Extracts metadata from the JSON file itself and creates a DB run record.
    */
   @Post('newRunFile')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-  async newRunFile(@UploadedFile() file: Express.Multer.File, @Body('metadata') metadataJson?: string) {
+  async newRunFile(@UploadedFile() file: Express.Multer.File) {
     if (!file || !file.buffer) {
       throw new BadRequestException('Missing uploaded file in `file` field');
     }
 
+    console.log('📁 File received:', file.originalname, `(${file.size} bytes)`);
+
     let metadata: any = {};
     try {
-      if (metadataJson) metadata = JSON.parse(metadataJson);
+      const fileContent = JSON.parse(file.buffer.toString('utf-8'));
+      if (fileContent.metadata) {
+        metadata = fileContent.metadata;
+      }
+      console.log('📋 Metadata extracted:', JSON.stringify(metadata, null, 2));
     } catch (e) {
       // ignore parse error and use empty metadata
+      console.warn('⚠️  Failed to parse file or extract metadata:', (e as Error).message);
     }
 
     // Determine key: use metadata.run_name or original filename or generated
     const datePart = new Date().toISOString().slice(0, 10);
     const runName = metadata?.run_name || file.originalname;
     const initialKey = metadata?.key || `run_data/${datePart}/${encodeURIComponent(String(runName))}`;
+    console.log('🔑 Initial S3 key:', initialKey);
 
     try {
       const bucket = this.configService.get<string>('AWS_S3_BUCKET');
@@ -93,17 +101,17 @@ export class S3Controller {
       // if a run already exists with this srcPath, do not create/upload a new run
       const existing = await this.runsService.findBySrcPath(initialS3Url);
       if (existing) {
-        return {
-          success: false,
-          error: 'A run with this srcPath already exists',
-          existingRun: existing,
-        };
+        console.warn('⚠️  Run already exists with srcPath:', initialS3Url);
+        console.log('📝 Will generate unique filename instead of rejecting...');
       }
 
       // ensure we don't overwrite an existing object in S3; this may append a suffix
       const key = await this.ensureUniqueKey(initialKey);
+      console.log('✅ Final S3 key (unique):', key);
 
+      console.log('⬆️  Uploading to S3...');
       await this.s3Service.uploadBuffer(key, file.buffer, file.mimetype || 'application/octet-stream');
+      console.log('✅ File uploaded to S3 successfully');
 
       const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
@@ -122,15 +130,21 @@ export class S3Controller {
         location: metadata?.location ?? null,
       };
 
+      console.log('💾 Creating database record with data:', JSON.stringify(runData, null, 2));
+
       let created;
       try {
         created = await this.runsService.createRun(runData as any);
+        console.log('✅ Database record created successfully:', created);
       } catch (err) {
         // if DB insert fails, remove the uploaded S3 object to avoid orphaned files
+        console.error('❌ Database record creation failed:', (err as Error).message);
         try {
           await this.s3Service.deleteFile(key);
+          console.log('🗑️  Deleted orphaned S3 object');
         } catch (delErr) {
           // swallow deletion error but include info in response
+          console.error('❌ Failed to delete orphaned S3 object:', (delErr as Error).message);
           return {
             success: false,
             error: `Run creation failed: ${(err as Error).message}; additionally failed to delete uploaded S3 object: ${(delErr as Error).message}`,
@@ -143,6 +157,7 @@ export class S3Controller {
         };
       }
 
+      console.log('🎉 Request completed successfully');
       return {
         success: true,
         s3Key: key,
@@ -150,6 +165,7 @@ export class S3Controller {
         run: created,
       };
     } catch (error) {
+      console.error('❌ Unexpected error:', (error as Error).message);
       return {
         success: false,
         error: (error as Error).message,
