@@ -44,9 +44,12 @@ docker-compose down
 
 ### 4. Set Up Backend Environment
 
+- You will need to request the S3 bucket details from Will Ellis, email him on wellis3@sheffield.ac.uk, Without these the website will not work
+
 ```bash
 # Copy environment file
 cp apps/backend/.env.example apps/backend/.env
+# Fill this environment file with the contents recieved by Will E
 
 # Generate and run database migrations
 cd apps/backend
