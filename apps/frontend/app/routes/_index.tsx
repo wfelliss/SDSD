@@ -1,138 +1,170 @@
-import { type MetaFunction } from "@remix-run/node";
-import { useState } from "react";
+// apps/frontend/app/routes/_index.tsx
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { useState, useEffect } from "react";
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "Frontend App" },
-    { name: "description", content: "Welcome to the frontend app!" },
-  ];
+type RunItem = {
+  id: number;
+  title: string | null;
+  srcPath: string;
+  date?: string;
+  location?: string;
+  length?: number;
 };
 
-export default function Index() {
-  const [number, setNumber] = useState(0);
-  const [apiResponse, setApiResponse] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [s3Prefix, setS3Prefix] = useState("");
+type RunJson = Record<string, any>; // generic JSON object
 
-  const testApi = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api");
-      const text = await response.text();
-      setApiResponse(text);
-    } catch (error) {
-      setApiResponse("API Error: " + (error as Error).message);
-    } finally {
-      setLoading(false);
+// ---------------------- LOADER ----------------------
+export const loader = async () => {
+  const backendURL =
+    process.env.BACKEND_URL || "http://localhost:3001/api/runs/";
+
+  const res = await fetch(backendURL);
+  if (!res.ok) {
+    throw new Response("Failed to fetch runs", { status: res.status });
+  }
+
+  const runs: RunItem[] = await res.json();
+  return json({ runs });
+};
+
+// ---------------------- COMPONENT ----------------------
+export default function Runs() {
+  const { runs } = useLoaderData<typeof loader>();
+  const [selected, setSelected] = useState<RunItem[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
+  const [loadingJson, setLoadingJson] = useState(false);
+
+  const toggleRun = (run: RunItem) => {
+    if (!sidebarOpen) return; // do nothing if sidebar is closed
+    const exists = selected.some((r) => r.id === run.id);
+
+    if (exists) {
+      setSelected(selected.filter((r) => r.id !== run.id));
+      setJsonData((prev) => {
+        const copy = { ...prev };
+        delete copy[run.id];
+        return copy;
+      });
+    } else if (selected.length < 2) {
+      setSelected([...selected, run]);
     }
   };
 
-  const listS3Files = async () => {
-    setLoading(true);
-    try {
-      const url = s3Prefix
-        ? `/api/s3/list?prefix=${encodeURIComponent(s3Prefix)}`
-        : "/api/s3/list";
-      const response = await fetch(url);
-      const data = await response.json();
-      setApiResponse(JSON.stringify(data, null, 2));
-    } catch (error) {
-      setApiResponse("S3 Error: " + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isCompareMode = selected.length > 1;
+
+  // Fetch JSON for selected runs
+  useEffect(() => {
+    const fetchJson = async (run: RunItem) => {
+      setLoadingJson(true);
+      try {
+        const res = await fetch(
+          `http://localhost:3001/api/s3/file?path=${encodeURIComponent(run.srcPath)}`
+        );
+        if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);
+        const data = await res.json();
+        setJsonData((prev) => ({ ...prev, [run.id]: data }));
+      } catch (err) {
+        console.error(err);
+        setJsonData((prev) => ({ ...prev, [run.id]: { error: (err as Error).message } }));
+      } finally {
+        setLoadingJson(false);
+      }
+    };
+
+    selected.forEach((run) => {
+      if (!jsonData[run.id]) {
+        fetchJson(run);
+      }
+    });
+  }, [selected]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="mx-auto max-w-4xl">
-        {/* Header Section */}
-        <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 mb-4 animate-fade-in">
-            Welcome to Remix Frontend
-          </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            This is your new Remix frontend app running in a Turborepo monorepo
-            with Tailwind CSS for beautiful styling.
-          </p>
-        </header>
-
-        {/* Button Demo Section */}
-        <div className="flex justify-center gap-4 mb-12 flex-wrap">
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div
+        className={`bg-gray-100 border-r transition-all duration-300 ${
+          sidebarOpen ? "w-64" : "w-16"
+        }`}
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          {sidebarOpen && <h2 className="font-bold">Available Runs</h2>}
           <button
-            className="btn-primary px-6 py-2"
-            onClick={() => setNumber(number + 1)}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1 rounded hover:bg-gray-200"
+            title={sidebarOpen ? "Collapse" : "Expand"}
           >
-            Click me! {number}
-          </button>
-
-          <button
-            className="btn-secondary px-6 py-2"
-            onClick={testApi}
-            disabled={loading}
-          >
-            {loading ? "Testing..." : "Test API"}
-          </button>
-
-          <button
-            className="btn-secondary px-6 py-2"
-            onClick={listS3Files}
-            disabled={loading}
-          >
-            {loading ? "Loading..." : "List S3 Files"}
+            {sidebarOpen ? "⮜" : "⮞"}
           </button>
         </div>
 
-        {/* S3 Prefix Input */}
-        <div className="mb-12 max-w-2xl mx-auto">
-          <input
-            type="text"
-            placeholder="Enter S3 prefix (optional)"
-            value={s3Prefix}
-            onChange={(e) => setS3Prefix(e.target.value)}
-            className="w-full px-4 py-2 border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500"
-          />
-        </div>
+        {sidebarOpen && (
+          <ul className="mt-2 space-y-2">
+            {runs.map((run) => {
+              const selectedState = selected.some((r) => r.id === run.id);
+              return (
+                <li key={run.id}>
+                  <button
+                    onClick={() => toggleRun(run)}
+                    className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
+                      selectedState
+                        ? "bg-blue-600 text-white"
+                        : "hover:bg-gray-200 text-gray-800"
+                    }`}
+                    title={run.title ?? "Untitled Run"}
+                  >
+                    {run.title ?? "Untitled Run"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
-        {/* API Response Section */}
-        {apiResponse && (
-          <div className="mb-12">
-            <div className="card p-6 max-w-2xl mx-auto">
-              <h3 className="text-lg font-semibold mb-2">API Response:</h3>
-              <pre className="bg-slate-100 p-3 rounded text-sm overflow-auto">
-                {apiResponse}
-              </pre>
+      {/* Main content */}
+      <div className="flex-1 p-6 overflow-auto">
+        {selected.length === 0 ? (
+          <p className="text-gray-500">Select a run from the sidebar to see details.</p>
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">
+              {isCompareMode ? "Compare Mode" : "Single Run Mode"}
+            </h2>
+
+            <ul className="list-disc ml-6 space-y-1 mb-6">
+              {selected.map((r) => (
+                <li key={r.id}>
+                  <span className="font-semibold">{r.title ?? "Untitled Run"}</span>
+                  {r.date && <span className="ml-2 text-gray-500">({r.date})</span>}
+                  {r.location && <span className="ml-2 text-gray-400">{r.location}</span>}
+                  {r.length !== undefined && (
+                    <span className="ml-2 text-gray-400">[{r.length}]</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {/* JSON display */}
+            <div className="bg-gray-50 p-4 rounded border">
+              {loadingJson ? (
+                <p>Loading JSON...</p>
+              ) : (
+                selected.map((r) => (
+                  <div key={r.id} className="mb-4">
+                    <h3 className="font-semibold mb-1">{r.title ?? "Untitled Run"} JSON</h3>
+                    <pre className="text-sm overflow-auto bg-white p-2 rounded border">
+                      {jsonData[r.id]
+                        ? JSON.stringify(jsonData[r.id], null, 2)
+                        : "No JSON available"}
+                    </pre>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
-
-        {/* Cards Section */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <div className="card p-6 hover:shadow-lg transition-shadow duration-200 group">
-            <span className="text-slate-600 group-hover:text-slate-800 transition-colors">
-              Learn about Remix features and API. Explore routing, data loading,
-              and server-side rendering.
-            </span>
-          </div>
-
-          <div className="card p-6 hover:shadow-lg transition-shadow duration-200 group">
-            <span className="text-slate-600 group-hover:text-slate-800 transition-colors">
-              Learn about Turborepo and monorepos. Discover build optimization
-              and workspace management.
-            </span>
-          </div>
-        </div>
-
-        {/* Footer Section */}
-        <footer className="text-center">
-          <div className="inline-flex items-center gap-2 text-slate-600">
-            <span>Edit</span>
-            <code className="bg-slate-200 text-slate-800 px-2 py-1 rounded text-sm font-mono">
-              app/routes/_index.tsx
-            </code>
-            <span>to get started.</span>
-          </div>
-        </footer>
       </div>
     </div>
   );
