@@ -10,6 +10,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
+import { PassThrough } from 'stream';
 
 @Injectable()
 export class S3Service {
@@ -230,6 +231,47 @@ export class S3Service {
     } catch (error) {
       this.logger.error(`Error generating signed URL for ${key}:`, error);
       throw error;
+    }
+  }
+  async getFileStream(pathOrUrl: string): Promise<{ stream: PassThrough; contentType?: string; contentLength?: number }> {
+    try {
+      let key = pathOrUrl;
+
+      // If a full S3 URL is provided, extract the key
+      if (pathOrUrl.startsWith('https://') || pathOrUrl.startsWith('http://')) {
+        try {
+          const url = new URL(pathOrUrl);
+          key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+        } catch (err) {
+          this.logger.warn(`Invalid URL provided, using as key: ${pathOrUrl}`);
+        }
+      }
+
+      // Get metadata
+      const head = await this.s3Client.send(new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }));
+
+      // Get object
+      const getObjectResp = await this.s3Client.send(new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }));
+
+      const stream = new PassThrough();
+      if (getObjectResp.Body) {
+        (getObjectResp.Body as any).pipe(stream);
+      }
+
+      return {
+        stream,
+        contentType: head.ContentType,
+        contentLength: head.ContentLength,
+      };
+    } catch (err) {
+      this.logger.error(`Error fetching S3 object from path or URL "${pathOrUrl}":`, err);
+      throw err;
     }
   }
 }
