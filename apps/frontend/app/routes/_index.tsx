@@ -34,10 +34,15 @@ export default function Runs() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const toggleRun = (run: RunItem) => {
+    if (!sidebarOpen) return; // do nothing if sidebar is closed
+    // setSidebarOpen(false);
     const exists = selected.some((r) => r.id === run.id);
-    setSelected(
-      exists ? selected.filter((r) => r.id !== run.id) : [...selected, run]
-    );
+
+    if (exists) {
+      setSelected(selected.filter((r) => r.id !== run.id));
+    } else if (selected.length < 2) {
+      setSelected([...selected, run]);
+    }
   };
 
   const isCompareMode = selected.length > 1;
@@ -62,24 +67,25 @@ export default function Runs() {
         </div>
 
         <ul className="mt-2 space-y-2">
-          {runs.map((run) => {
-            const selectedState = selected.some((r) => r.id === run.id);
-            return (
-              <li key={run.id}>
-                <button
-                  onClick={() => toggleRun(run)}
-                  className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
-                    selectedState
-                      ? "bg-blue-600 text-white"
-                      : "hover:bg-gray-200 text-gray-800"
-                  }`}
-                  title={run.title ?? "Untitled Run"}
-                >
-                  {sidebarOpen ? run.title ?? "Untitled Run" : ""}
-                </button>
-              </li>
-            );
-          })}
+          {sidebarOpen &&
+            runs.map((run) => {
+              const selectedState = selected.some((r) => r.id === run.id);
+              return (
+                <li key={run.id}>
+                  <button
+                    onClick={() => toggleRun(run)}
+                    className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
+                      selectedState
+                        ? "bg-blue-600 text-white"
+                        : "hover:bg-gray-200 text-gray-800"
+                    }`}
+                    title={run.title ?? "Untitled Run"}
+                  >
+                    {run.title ?? "Untitled Run"}
+                  </button>
+                </li>
+              );
+            })}
         </ul>
       </div>
 
