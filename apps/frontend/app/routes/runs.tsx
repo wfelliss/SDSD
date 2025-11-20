@@ -1,134 +1,113 @@
 // apps/frontend/app/routes/runs.tsx
-import fs from "fs";
-import path from "path";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 
-
-interface FilesByDir {
-  folder: string;
-  files: string[];
-}
-
-type FileType = {
-  folder: string;
-  name: string;
-  url: string;
+type RunItem = {
+  id: number;
+  title: string | null;
+  srcPath: string;
+  date?: string;
+  location?: string;
+  length?: number;
 };
-//loads Json run files from frontend/public/data/run_data
-//seperates the files based on year directory 
+
+// ---------------------- LOADER ----------------------
 export const loader = async () => {
-  const dir = path.join(process.cwd(), "public", "data", "run_data");
-  if (!fs.existsSync(dir)) return json({ filesByDir: [] });
+  const backendURL =
+    process.env.BACKEND_URL || "http://localhost:3001/api/runs/";
 
-  const runYears = fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
+  const res = await fetch(backendURL);
 
-  const filesByDir: FilesByDir[] = runYears.map((year) => {
-    const yearDir = path.join(dir, year);
-    const files = fs
-      .readdirSync(yearDir)
-      .filter((f) => !f.startsWith("."))
-      .sort();
-    return { folder: year, files };
-  });
+  if (!res.ok) {
+    throw new Response("Failed to fetch runs", { status: res.status });
+  }
 
-  return json({ filesByDir });
+  const runs: RunItem[] = await res.json();
+  return json({ runs });
 };
 
-//takes in loader data and sets up states
+// ---------------------- COMPONENT ----------------------
 export default function Runs() {
-  const { filesByDir } = useLoaderData<typeof loader>();
-  const [expandedFolder, setExpandedFolder] = useState<string | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<FileType[]>([]);
+  const { runs } = useLoaderData<typeof loader>();
+  const [selected, setSelected] = useState<RunItem[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  //checks if folder is already open or different 
-  const toggleFolder = (folder: string) => {
-    setExpandedFolder(expandedFolder === folder ? null : folder);
-  };
-
-  //toggles a file between selected and not selected 
-  const toggleFile = (folder: string, filename: string) => {
-    const fileObj: FileType = {
-      folder,
-      name: filename,
-      url: `/data/run_data/${folder}/${filename}`,
-    };
-
-    const exists = selectedFiles.some(
-      (f) => f.folder === folder && f.name === filename
-    );
-
-    setSelectedFiles(
-      exists
-        ? selectedFiles.filter(
-            (f) => !(f.folder === folder && f.name === filename)
-          )
-        : [...selectedFiles, fileObj]
+  const toggleRun = (run: RunItem) => {
+    const exists = selected.some((r) => r.id === run.id);
+    setSelected(
+      exists ? selected.filter((r) => r.id !== run.id) : [...selected, run]
     );
   };
-  //used to decide which mode should be active
-  const isCompareMode = selectedFiles.length > 1;
+
+  const isCompareMode = selected.length > 1;
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Available Runs</h1>
-
-      {filesByDir.map(({ folder, files }) => (
-        <div key={folder} className="mb-4">
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div
+        className={`bg-gray-100 border-r transition-all duration-300 ${
+          sidebarOpen ? "w-64" : "w-16"
+        }`}
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          {sidebarOpen && <h2 className="font-bold">Available Runs</h2>}
           <button
-            onClick={() => toggleFolder(folder)}
-            className="font-semibold text-lg text-left w-full text-gray-800 hover:text-blue-700"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1 rounded hover:bg-gray-200"
+            title={sidebarOpen ? "Collapse" : "Expand"}
           >
-            {folder}
+            {sidebarOpen ? "⮜" : "⮞"}
           </button>
+        </div>
 
-          {expandedFolder === folder && (
-            <ul className="ml-4 mt-2 space-y-1">
-              {files.length === 0 ? (
-                <li className="text-gray-500 text-sm">
-                  No files in this folder
+        <ul className="mt-2 space-y-2">
+          {runs.map((run) => {
+            const selectedState = selected.some((r) => r.id === run.id);
+            return (
+              <li key={run.id}>
+                <button
+                  onClick={() => toggleRun(run)}
+                  className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
+                    selectedState
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-gray-200 text-gray-800"
+                  }`}
+                  title={run.title ?? "Untitled Run"}
+                >
+                  {sidebarOpen ? run.title ?? "Untitled Run" : ""}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 p-6 overflow-auto">
+        {selected.length === 0 ? (
+          <p className="text-gray-500">Select a run from the sidebar to see details.</p>
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">
+              {isCompareMode ? "Compare Mode" : "Single Run Mode"}
+            </h2>
+
+            <ul className="list-disc ml-6 space-y-1">
+              {selected.map((r) => (
+                <li key={r.id}>
+                  <span className="font-semibold">{r.title ?? "Untitled Run"}</span>
+                  {r.date && <span className="ml-2 text-gray-500">({r.date})</span>}
+                  {r.location && <span className="ml-2 text-gray-400">{r.location}</span>}
+                  {r.length !== undefined && (
+                    <span className="ml-2 text-gray-400">[{r.length}]</span>
+                  )}
                 </li>
-              ) : (
-                files.map((f) => {
-                  const selected = selectedFiles.some(
-                    (file) => file.folder === folder && file.name === f
-                  );
-                  return (
-                    <li key={f}>
-                      <button
-                        onClick={() => toggleFile(folder, f)}
-                        className={`px-2 py-1 rounded transition text-left w-full ${
-                          selected
-                            ? "bg-blue-600 text-white"
-                            : "hover:bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {f}
-                      </button>
-                    </li>
-                  );
-                })
-              )}
+              ))}
             </ul>
-          )}
-        </div>
-      ))}
-
-      {selectedFiles.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold mb-2"> {isCompareMode ? "Compare Mode" : "Single File Mode" }</h2>
-          <h2 className="text-xl font-bold mb-2"> {isCompareMode ? "Currently Selected Files:" : "Currently Selected File:" }</h2>
-          <ul> 
-            {selectedFiles.map((f => (<li key={`${f.folder}/${f.name}`}>
-              {f.name}
-            </li>
-            )))}
-          </ul>
-        </div>
-      )}
-      </div>)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
