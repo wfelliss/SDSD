@@ -14,6 +14,10 @@ export class S3Controller {
     private readonly configService: ConfigService,
   ) {}
 
+
+  /**   * GET api/s3/list?prefix=...
+   * Lists files in S3 under the given prefix
+   */
   @Get('list')
   async listFiles(@Query('prefix') prefix: string = '') {
     try {
@@ -33,7 +37,7 @@ export class S3Controller {
   }
 
   /**
-   * GET /s3/file?path=...
+   * GET api/s3/file?path=...
    * Returns the file content from S3
    */
   @Get('file')

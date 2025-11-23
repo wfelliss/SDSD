@@ -99,7 +99,7 @@ async function seed() {
         "comments": "HSC fully firm, full run, only measuring shock",
         "length": 56679,
         "date": "2025-11-13T18:57:12.942Z",
-        "location": null,
+        "location": "office",
         "createdAt": "2025-11-13T18:57:12.899Z"
     },
     {
@@ -109,7 +109,7 @@ async function seed() {
         "comments": "Test Uploaded file",
         "length": 16864,
         "date": "2025-11-13T18:57:27.966Z",
-        "location": null,
+        "location": "home",
         "createdAt": "2025-11-13T18:57:27.984Z"
     }
   ];
