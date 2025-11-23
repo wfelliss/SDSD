@@ -33,7 +33,8 @@ export default function Runs() {
   const { runs } = useLoaderData<typeof loader>();
   const [selected, setSelected] = useState<RunItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
+  const [query, setQuery] = useState("")
+    const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingJson, setLoadingJson] = useState(false);
 
   const toggleRun = (run: RunItem) => {
@@ -53,6 +54,12 @@ export default function Runs() {
   };
 
   const isCompareMode = selected.length > 1;
+  const filteredRuns = runs.filter(r =>
+    (r.title ?? "").toLowerCase().includes(query.toLowerCase())||
+    (r.location?? "").toLowerCase().includes(query.toLowerCase())
+  );
+
+
 
   // Fetch JSON for selected runs
   useEffect(() => {
@@ -101,7 +108,17 @@ export default function Runs() {
 
         {sidebarOpen && (
           <ul className="mt-2 space-y-2">
-            {runs.map((run) => {
+            <li>
+            <input 
+            type="search"
+            placeholder="search..."
+            value = {query}
+            onChange={e => setQuery(e.target.value)}
+            className="block w-full pl-9 pr-3 py-2 text-sm text-gray-900 bg-gray-100 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400">
+
+            </input>
+            </li>
+                        {filteredRuns.map((run) => {
               const selectedState = selected.some((r) => r.id === run.id);
               return (
                 <li key={run.id}>
