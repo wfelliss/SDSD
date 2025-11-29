@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import { M } from "node_modules/vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf";
+import { cn } from "app/lib/utils";
+import { CheckIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 
 // ---------- Types ----------
@@ -84,13 +85,7 @@ export default function Runs() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar
-        runs={runs}
-        selected={selected}
-        toggleRun={toggleRun}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      />
+      <Sidebar runs={runs} selected={selected} setSelected={setSelected} />
       {/* Main content */}
       <MainContent
         selected={selected}
@@ -166,89 +161,49 @@ function MainContent({
 interface SidebarProps {
   runs: RunItem[];
   selected: RunItem[];
-  toggleRun: (run: RunItem) => void;
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
+  setSelected: (runs: RunItem[]) => void;
 }
 
-function Sidebar({
-  runs,
-  selected,
-  toggleRun,
-  sidebarOpen,
-  setSidebarOpen,
-}: SidebarProps) {
-  return (
-    <div
-      className={`bg-gray-100 border-r transition-all duration-300 ${
-        sidebarOpen ? "w-64" : "w-16"
-      }`}
-    >
-      <div className="flex items-center justify-between p-4 border-b">
-        {sidebarOpen && <h2 className="font-bold">Available Runs</h2>}
 
-        <SidebarToggleButton
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
-      </div>
-
-      {sidebarOpen && (
-        <ul className="mt-2 space-y-2">
-          {runs.map((run) => {
-            const selectedState = selected.some((r) => r.id === run.id);
-            return (
-              <li key={run.id}>
-                <RunButton
-                  run={run}
-                  selectedState={selectedState}
-                  toggleRun={toggleRun}
-                />
-              </li>
-            );
-          })}
-        </ul>
-      )}
+function Sidebar({ runs, selected, setSelected }: SidebarProps) {
+  return <div className="w-64 h-svh p-4 flex flex-col gap-4 bg-slate-50 border-r border-slate-100 text-slate-800">
+    <div className="flex flex-col gap-1">
+      <h1 className="font-semibold text-xl text-slate-700">Select runs to compare</h1>
+      <h2 className="text-">You can compare up to 2 runs</h2>
     </div>
-  );
+    <ul className="flex flex-col">
+      {runs.map((run) => <SidebarMenuButton key={run.id} run={run} selected={selected} setSelected={setSelected} />)}
+    </ul>
+  </div>
 }
 
-interface SidebarToggleButtonProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-}
-// SidebarToggleButton Component
-function SidebarToggleButton({ sidebarOpen, setSidebarOpen }: SidebarToggleButtonProps) {
-  return (
-    <button
-      onClick={() => setSidebarOpen(!sidebarOpen)}
-      className="p-1 rounded hover:bg-gray-200"
-      title={sidebarOpen ? "Collapse" : "Expand"}
-    >
-      {sidebarOpen ? "⮜" : "⮞"}
-    </button>
-  );
-}
-
-
-interface RunButtonProps {
+interface SidebarMenuButtonProps {
   run: RunItem;
-  selectedState: boolean;
-  toggleRun: (run: RunItem) => void;
+  selected: RunItem[];
+  setSelected: (runs: RunItem[]) => void;
 }
-// RunButton Component
-function RunButton({ run, selectedState, toggleRun }: RunButtonProps) {
-  return (
-    <button
-      onClick={() => toggleRun(run)}
-      className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
-        selectedState
-          ? "bg-blue-600 text-white"
-          : "hover:bg-gray-200 text-gray-800"
-      }`}
-      title={run.title ?? "Untitled Run"}
-    >
-      {run.title ?? "Untitled Run"}
-    </button>
-  );
+
+function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProps) {
+  
+  const isSelected = selected.some(r => r.id === run.id);
+  
+  const toggle = () => {
+    if (isSelected) {
+      setSelected(selected.filter(r => r.id !== run.id));
+    } else if (selected.length < 2) {
+      setSelected([...selected, run]);
+    }
+  }
+
+  return <button className="w-full rounded-md group hover:bg-slate-100 flex justify-between items-center p-2 cursor-pointer" onClick={toggle}>
+    <div className="flex items-center gap-2">
+      <div className={cn("size-4 border-indigo-700 border-2 rounded group-hover:border-indigo-600", isSelected && "bg-indigo-700")}>
+        {isSelected && <CheckIcon className="size-full text-white" strokeWidth={4} />}
+      </div>
+      <span className="text-sm">{run.title}</span>
+    </div>
+    <span className="text-sm font-light">
+      {run?.date && new Date(run.date).toLocaleDateString()}
+    </span>
+  </button>
 }
