@@ -3,12 +3,14 @@ import { installGlobals } from "@remix-run/node";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import devtoolsJson from "vite-plugin-devtools-json";
+import tailwindcss from "@tailwindcss/vite";
 
 installGlobals();
 
 export default defineConfig({
   plugins: [
     devtoolsJson(),
+    tailwindcss(),
     remix({
       future: {
         v3_fetcherPersist: true,
@@ -20,9 +22,6 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
-  css: {
-    postcss: "./postcss.config.js",
-  },
   server: {
     port: 3000,
     proxy: {
