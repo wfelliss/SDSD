@@ -2,6 +2,8 @@
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useState, useEffect } from "react";
+import { DisplacementPlot } from "../components/graphs/domain/DisplacementPlot";
+import { TravelHistogram } from "../components/graphs/domain/TravelHistogram";
 
 type RunItem = {
   id: number;
@@ -29,6 +31,13 @@ export const loader = async () => {
 };
 
 // ---------------------- COMPONENT ----------------------
+const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+  <h2 className="text-xl font-bold text-foreground mb-6">{children}</h2>
+);
+
+const SectionDivider = () => <div className="border-t border-border my-10" />;
+
+// ---------------------- MAIN COMPONENT ----------------------
 export default function Runs() {
   const { runs } = useLoaderData<typeof loader>();
   const [selected, setSelected] = useState<RunItem[]>([]);
@@ -36,6 +45,7 @@ export default function Runs() {
   const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingJson, setLoadingJson] = useState(false);
 
+  // Toggle Logic
   const toggleRun = (run: RunItem) => {
     if (!sidebarOpen) return; // do nothing if sidebar is closed
     const exists = selected.some((r) => r.id === run.id);
@@ -92,7 +102,7 @@ export default function Runs() {
           {sidebarOpen && <h2 className="font-bold">Available Runs</h2>}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 rounded hover:bg-gray-200"
+            className="p-1 rounded hover:bg-accent hover:text-accent-foreground transition-colors"
             title={sidebarOpen ? "Collapse" : "Expand"}
           >
             {sidebarOpen ? "⮜" : "⮞"}
@@ -100,19 +110,18 @@ export default function Runs() {
         </div>
 
         {sidebarOpen && (
-          <ul className="mt-2 space-y-2">
+          <ul className="mt-2 space-y-2 p-2">
             {runs.map((run) => {
-              const selectedState = selected.some((r) => r.id === run.id);
+              const isSelected = selected.some((r) => r.id === run.id);
               return (
                 <li key={run.id}>
                   <button
                     onClick={() => toggleRun(run)}
-                    className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
-                      selectedState
-                        ? "bg-blue-600 text-white"
-                        : "hover:bg-gray-200 text-gray-800"
+                    className={`flex items-center px-3 py-2 rounded-md w-full text-left text-sm transition-colors ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
                     }`}
-                    title={run.title ?? "Untitled Run"}
                   >
                     {run.title ?? "Untitled Run"}
                   </button>
@@ -123,49 +132,164 @@ export default function Runs() {
         )}
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 p-6 overflow-auto">
-        {selected.length === 0 ? (
-          <p className="text-gray-500">Select a run from the sidebar to see details.</p>
-        ) : (
-          <div>
-            <h2 className="text-2xl font-bold mb-4">
-              {isCompareMode ? "Compare Mode" : "Single Run Mode"}
-            </h2>
-
-            <ul className="list-disc ml-6 space-y-1 mb-6">
-              {selected.map((r) => (
-                <li key={r.id}>
-                  <span className="font-semibold">{r.title ?? "Untitled Run"}</span>
-                  {r.date && <span className="ml-2 text-gray-500">({r.date})</span>}
-                  {r.location && <span className="ml-2 text-gray-400">{r.location}</span>}
-                  {r.length !== undefined && (
-                    <span className="ml-2 text-gray-400">[{r.length}]</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            {/* JSON display */}
-            <div className="bg-gray-50 p-4 rounded border">
-              {loadingJson ? (
-                <p>Loading JSON...</p>
-              ) : (
-                selected.map((r) => (
-                  <div key={r.id} className="mb-4">
-                    <h3 className="font-semibold mb-1">{r.title ?? "Untitled Run"} JSON</h3>
-                    <pre className="text-sm overflow-auto bg-white p-2 rounded border">
-                      {jsonData[r.id]
-                        ? JSON.stringify(jsonData[r.id], null, 2)
-                        : "No JSON available"}
-                    </pre>
-                  </div>
-                ))
-              )}
-            </div>
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-y-auto p-8 bg-background">
+        
+        {/* Empty State */}
+        {selected.length === 0 && (
+          <div className="flex flex-col items-center justify-center mt-32 text-muted-foreground">
+             <span className="font-medium text-lg">Select a run to start</span>
+             <span className="text-sm opacity-70">Choose from the sidebar</span>
           </div>
         )}
-      </div>
+        
+        {/* Loading State */}
+        {loadingJson && (
+          <div className="flex items-center justify-center mt-32 text-muted-foreground animate-pulse">
+            Loading telemetry data...
+          </div>
+        )}
+
+        {!loadingJson && selected.length > 0 && (
+          <div className="w-full pb-20">
+            
+            {/* Page Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+                {isCompareMode ? "Run Comparison" : (selected[0].title || "Run Details")}
+              </h1>
+            </div>
+
+            {/* DISPLACEMENT PLOT */}
+            <section>
+              <SectionHeader>Displacement Plot</SectionHeader>
+
+              {/* --- Compare runs mode --- */}
+              {isCompareMode ? (
+                <div className="grid grid-cols-1 gap-6 w-full">
+                  
+                  {/* Plot 1: Front Fork Comparison */}
+                  <DisplacementPlot
+                    title="Front Fork Comparison"
+                    dynamicSag={{
+                      front: jsonData[selected[0].id]?.data.suspension.front_sus,
+                      rear: jsonData[selected[1].id]?.data.suspension.front_sus
+                    }}
+                    series={selected.map((run, i) => {
+                      const data = jsonData[run.id];
+                      if (!data || data.error) return { label: "Loading...", rawData: [], freq: 1 };
+                      return {
+                        label: run.title || `Run ${run.id}`,
+                        color: i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
+                        rawData: data.data.suspension.front_sus,
+                        freq: Number(data.metadata.sample_frequency?.front_sus || 1)
+                      };
+                    })}
+                  />
+
+                  {/* Plot 2: Rear Shock Comparison */}
+                  <DisplacementPlot
+                    title="Rear Shock Comparison"
+                    dynamicSag={{
+                      front: jsonData[selected[0].id]?.data.suspension.rear_sus,
+                      rear: jsonData[selected[1].id]?.data.suspension.rear_sus
+                    }}
+                    series={selected.map((run, i) => {
+                      const data = jsonData[run.id];
+                      if (!data || data.error) return { label: "Loading...", rawData: [], freq: 1 };
+                      return {
+                        label: run.title || `Run ${run.id}`,
+                        color: i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
+                        rawData: data.data.suspension.rear_sus,
+                        freq: Number(data.metadata.sample_frequency?.rear_sus || 1)
+                      };
+                    })}
+                  />
+                </div>
+              ) : (
+                /* --- Single Run Mode --- */
+                jsonData[selected[0].id] && !jsonData[selected[0].id].error && (
+                  <DisplacementPlot
+                    title="Suspension Displacement"
+                    dynamicSag={{
+                      front: jsonData[selected[0].id].data.suspension.front_sus,
+                      rear: jsonData[selected[0].id].data.suspension.rear_sus
+                    }}
+                    series={[
+                      {
+                        label: "Front Fork",
+                        color: "hsl(var(--chart-1))",
+                        rawData: jsonData[selected[0].id].data.suspension.front_sus,
+                        freq: Number(jsonData[selected[0].id].metadata.sample_frequency?.front_sus || 1)
+                      },
+                      {
+                        label: "Rear Shock",
+                        color: "hsl(var(--chart-2))",
+                        rawData: jsonData[selected[0].id].data.suspension.rear_sus,
+                        freq: Number(jsonData[selected[0].id].metadata.sample_frequency?.rear_sus || 1)
+                      }
+                    ]}
+                  />
+                )
+              )}
+            </section>
+
+            <SectionDivider />
+
+            {/* HISTOGRAM PLOT */}
+            <section>
+              <SectionHeader>Travel Histogram</SectionHeader>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+                
+                {/* Front Column */}
+                <div className="space-y-4">
+                  {selected.map((run, i) => {
+                    const data = jsonData[run.id];
+                    if (!data || data.error) return null;
+                    
+                    return (
+                      <TravelHistogram
+                        key={`front-${run.id}`}
+                        title={isCompareMode ? `Front: ${run.title}` : "Front Travel"}
+                        rawData={data.data.suspension.front_sus}
+                        colorClass={i === 0 ? "fill-chart-1" : "fill-chart-2"}
+                        hoverColorClass={i === 0 ? "fill-chart-1-hover" : "fill-chart-2-hover"}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Rear Column */}
+                <div className="space-y-4">
+                  {selected.map((run, i) => {
+                    const data = jsonData[run.id];
+                    if (!data || data.error) return null;
+
+                    const colorFill = !isCompareMode 
+                      ? "fill-chart-2" 
+                      : (i === 0 ? "fill-chart-1" : "fill-chart-2");
+                    
+                    const colorHover = !isCompareMode 
+                      ? "fill-chart-2-hover" 
+                      : (i === 0 ? "fill-chart-1-hover" : "fill-chart-2-hover");
+
+                    return (
+                      <TravelHistogram
+                        key={`rear-${run.id}`}
+                        title={isCompareMode ? `Rear: ${run.title}` : "Rear Travel"}
+                        rawData={data.data.suspension.rear_sus}
+                        colorClass={colorFill}
+                        hoverColorClass={colorHover}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+          </div>
+        )}
+      </main>
     </div>
   );
 }

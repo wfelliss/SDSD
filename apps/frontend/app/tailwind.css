@@ -24,6 +24,10 @@
     --input: 240 5.9% 90%;
     --ring: 240 5.9% 10%;
     --radius: 0.5rem;
+    --chart-1: 216, 100%, 50%;
+    --chart-1-hover: 204, 100%, 50%;
+    --chart-2: 30, 100%, 60%;
+    --chart-2-hover: 48, 100%, 50%;
   }
 
   .dark {
@@ -87,5 +91,41 @@
 
   .input {
     @apply flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .line-path {
+    @apply fill-none stroke-[2px] transition-colors duration-300;
+  }
+
+  .line-primary {
+    stroke: hsl(var(--chart-1));
+  }
+
+  .line-secondary {
+    stroke: hsl(var(--chart-2));
+  }
+
+  .line-context {
+    @apply fill-none stroke-[1px] opacity-60;
+  }
+
+  .line-lowemphasis { 
+    stroke: hsl(var(--foreground));
+    opacity: 0.35;
+    stroke-width: 3px;
+  }
+
+  .bar-rect {
+    @apply transition-colors duration-200;
+  }
+
+  .fill-chart-1       { fill: hsl(var(--chart-1)); }
+  .fill-chart-1-hover { fill: hsl(var(--chart-1-hover)); }
+
+  .fill-chart-2       { fill: hsl(var(--chart-2)); }
+  .fill-chart-2-hover { fill: hsl(var(--chart-2-hover)); }
+
+  .brush .selection {
+    @apply fill-muted-foreground/20 stroke-border;
   }
 }
