@@ -10,7 +10,7 @@ interface TravelHistogramProps {
   height?: number;
 }
 
-export const TravelHistogram: React.FC<TravelHistogramProps> = ({
+export const TravelHistogram: React.FC<TravelHistogramProps> = ({ 
   rawData,
   title = "Suspension Travel",
   colorClass = "fill-blue-500",
@@ -18,7 +18,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
   height = 160
 }) => {
   
-  // Transform Data using telemetry utility
+  // use telemetry utility
   const histData = useMemo(() => {
     return processHistogramData(rawData);
   }, [rawData]);
@@ -29,7 +29,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
 
   return (
     <div className="w-full">
-      <Histogram 
+      <Histogram // use base Histogram component
         data={histData} 
         xDomain={[0, 100]}
         height={height} 

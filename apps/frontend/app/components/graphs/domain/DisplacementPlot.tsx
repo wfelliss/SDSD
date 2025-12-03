@@ -28,7 +28,8 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
   width = 1000,
   height = 300
 }) => {
-
+ 
+  // sag lines calculation
   const sagLines = useMemo(() => {
     if (!dynamicSag) return [];
 
@@ -47,6 +48,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
     return output;
   }, [dynamicSag, series]);
 
+  // chart data calculation
   const chartData = useMemo(() => {
     const mainLines = series.map(s => processLinePlotData(s.rawData, s.freq));
     return [...mainLines, ...sagLines];
@@ -72,7 +74,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
       </div>
 
       <div className="w-full overflow-hidden">
-        <LinePlot
+        <LinePlot // use base LinePlot component
           data={chartData}
           yDomain={[0, 100]}
           width={width}

@@ -38,7 +38,7 @@ export const Histogram: React.FC<HistogramProps> = ({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // 2. Main D3 Logic
+  // Main D3 Logic
   useEffect(() => {
     if (!data || width === 0 || !containerRef.current) return;
 
@@ -46,16 +46,15 @@ export const Histogram: React.FC<HistogramProps> = ({
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
-    // --- INITIALIZATION (Runs Once) ---
+    // --- INITIALIZATION ---
     if (!d3Ref.current.initialized) {
-        // Clear potential duplicates (HMR safety)
         d3.select(containerRef.current).selectAll("svg").remove();
 
         const svg = d3.select(containerRef.current)
             .append("svg")
             .attr("width", width)
             .attr("height", height)
-            .attr("class", "overflow-visible"); // Allows labels/tooltips to not be clipped
+            .attr("class", "overflow-visible");
         
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -74,57 +73,53 @@ export const Histogram: React.FC<HistogramProps> = ({
         };
     }
 
-    // --- UPDATES (Runs on Prop Changes) ---
+    // --- UPDATES ---
     const { svg, g, xAxisGroup, yAxisGroup, x, y } = d3Ref.current;
     const tooltip = d3.select(tooltipRef.current);
 
     // Update dimensions
     svg.attr("width", width).attr("height", height);
 
-    // 1. Determine Domain
-    // Use prop if provided (e.g., [0, 100]), otherwise calc extent from data
+    // Determine Domain
     const finalDomain = xDomain || (d3.extent(data) as [number, number]);
     const dMin = finalDomain[0] ?? 0;
-    const dMax = finalDomain[1] ?? 100; // Fallback defaults
+    const dMax = finalDomain[1] ?? 100; 
 
     x.range([0, innerWidth]).domain([dMin, dMax]);
     
-    // Only "nice" the domain (round edges) if we are auto-calculating.
-    // If user passed [0, 100], we strictly respect it.
     if (!xDomain) x.nice();
 
-    // 2. Calculate Bins
+    // Calculate Bins
     const histogramGenerator = d3.bin()
-        .domain(x.domain() as [number, number]) // Critical: Bin domain must match Axis domain
-        .thresholds(x.ticks(20)); // Aim for ~20 bins
+        .domain(x.domain() as [number, number])
+        .thresholds(x.ticks(20)); // 20 bins for 5% range
 
     const bins = histogramGenerator(data);
 
-    // 3. Update Y Scale (based on bin with highest count)
+    // Update Y Scale 
     const yMax = d3.max(bins, d => d.length) || 0;
     y.range([innerHeight, 0]).domain([0, yMax]);
 
-    // 4. Draw X Axis
+    // Draw X Axis
     xAxisGroup
         .attr("transform", `translate(0,${innerHeight})`)
         .transition().duration(500)
         .call(d3.axisBottom(x));
     
-    // 5. Draw Y Axis
-    // Use integer format ("d") if max count is small, else SI units ("~s") like 1k, 2k
+    // Draw Y Axis
     const yTickFormat = yMax < 10 ? d3.format("d") : d3.format("~s");
     
     yAxisGroup
         .transition().duration(500)
         .call(d3.axisLeft(y).ticks(5).tickFormat(yTickFormat));
 
-    // 6. Style Axes (Tailwind utility classes)
+    // Style Axes
     svg.selectAll(".domain").attr("class", "stroke-border");
     svg.selectAll(".tick line").attr("class", "stroke-border");
     svg.selectAll(".tick text").attr("class", "text-muted-foreground text-xs");
-    yAxisGroup.select(".domain").remove(); // Clean look: remove vertical axis line
+    yAxisGroup.select(".domain").remove(); 
 
-    // 7. Render Bars
+    // Render Bars
     g.selectAll("rect")
       .data(bins)
       .join(
@@ -133,7 +128,7 @@ export const Histogram: React.FC<HistogramProps> = ({
             .attr("width", (d: any) => Math.max(0, x(d.x1!) - x(d.x0!) - 1))
             .attr("y", innerHeight)
             .attr("height", 0)
-            .attr("rx", 2) // Optional: Rounded top corners
+            .attr("rx", 2)
             .attr("ry", 2), 
         (update: any) => update,
         (exit: any) => exit.transition().duration(500).attr("y", innerHeight).attr("height", 0).remove()

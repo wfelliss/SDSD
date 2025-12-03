@@ -25,7 +25,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState(0);
 
-  // Measure container width on resize to ensure chart fits
+  // Resize observer
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
@@ -36,7 +36,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Persist D3 scales and selection groups across renders to prevent expensive recreation
+  //  D3 contex ref
   const contextRef = useRef<any>({
     initialized: false,
     x: d3.scaleLinear(),
@@ -46,6 +46,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     brushGroup: null, 
   });
 
+  // Main D3 logic
   useEffect(() => {
     if (!svgRef.current || data.length === 0 || width === 0) return;
 
@@ -57,13 +58,12 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 
     const svg = d3.select(svgRef.current);
 
-    // Updates the Focus chart X-domain based on the Context brush selection
+    // Brushed interaction handler
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent && event.sourceEvent.type === "zoom") return;
       
       const { x, x2, focus, xAxisGroup } = contextRef.current;
       
-      // Convert pixel selection -> data domain
       const s = (event.selection as [number, number]) || x2.range();
       x.domain(s.map(x2.invert, x2));
       
@@ -76,7 +76,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       xAxisGroup?.call(d3.axisBottom(x));
     };
 
-    // One-time DOM setup: Create groups, axes, and clip paths
+    // Initialization
     if (!contextRef.current.initialized) {
       svg.selectAll("*").remove();
 
@@ -119,7 +119,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       };
     }
 
-    // React Update Cycle: Update domains, ranges, and redraw paths
+    // Updates
     const { x, y, x2, focus, context, xAxisGroup, yAxisGroup, xAxis2Group, brush, brushGroup } = contextRef.current;
 
     svg.select("#clip rect").attr("width", innerWidth);
