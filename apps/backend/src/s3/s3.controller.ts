@@ -89,30 +89,80 @@ export class S3Controller {
     }
   }
 
+  private parseCsvToColumnArrays(csv: string) {
+    const rows = csv.trim().split('\n').map(r => r.split(','));
+
+    const header = rows[0];
+    const numCols = header.length;
+
+    // Prepare an array per column
+    const columns: any[][] = Array.from({ length: numCols }, () => []);
+
+    // Fill columns
+    for (let r = 1; r < rows.length; r++) {
+      for (let c = 0; c < numCols; c++) {
+        const raw = rows[r][c]?.trim() ?? '';
+
+        // Try to parse JSON array; if fails, use raw value
+        try {
+          columns[c].push(JSON.parse(raw));
+        } catch {
+          columns[c].push(raw);
+        }
+      }
+    }
+
+    return columns;
+  }
+
   /**
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
    */
   @Post('newRunFile')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-  async newRunFile(@UploadedFile() file: Express.Multer.File) {
+  async newRunFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('metadata') metadataJson?: string,) {
     if (!file || !file.buffer) {
       throw new BadRequestException('Missing uploaded file in `file` field');
     }
+    console.log('📁 CSV received:', file.originalname, `(${file.size} bytes)`);
 
-    console.log('📁 File received:', file.originalname, `(${file.size} bytes)`);
-
+    // Parse metadata JSON if provided
     let metadata: any = {};
-    try {
-      const fileContent = JSON.parse(file.buffer.toString('utf-8'));
-      if (fileContent.metadata) {
-        metadata = fileContent.metadata;
+    if (metadataJson) {
+      try {
+        metadata = JSON.parse(metadataJson);
+        console.log('📝 Metadata received:', JSON.stringify(metadata, null, 2));
+      } catch (err) {
+        console.warn('⚠️  Failed to parse metadata JSON:', (err as Error).message);
       }
-      console.log('📋 Metadata extracted:', JSON.stringify(metadata, null, 2));
-    } catch (e) {
-      // ignore parse error and use empty metadata
-      console.warn('⚠️  Failed to parse file or extract metadata:', (e as Error).message);
     }
+    // Convert new csv into json format
+    const csvContent = file.buffer.toString('utf-8');
+    const columns = this.parseCsvToColumnArrays(csvContent);
+    console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
+
+    //build json file
+    const json = {
+      "gyroscope": {
+        "axis1": columns[0] || [],
+        "axis2": columns[1] || [],
+        "axis3": columns[2] || [],
+      },
+      "accelerometer": {
+        "axis1": columns[3] || [],
+        "axis2": columns[4] || [],
+        "axis3": columns[5] || [],
+      },
+      "suspension": {
+        "rear_sus": columns[6] || [],
+        "front_sus": columns[7] || [],
+      },
+      metadata,
+    };
+    const jsonBuffer = Buffer.from(JSON.stringify(json));
 
     // Determine key: use metadata.run_name or original filename or generated
     const datePart = new Date().toISOString().slice(0, 10);
