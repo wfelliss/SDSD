@@ -152,12 +152,17 @@ bun run check-types          # Type check all packages
 apps/
 ├── frontend/                # Remix frontend
 │   ├── app/
-│   │   ├── routes/         # Remix routes
-│   │   ├── root.tsx        # Root component
-│   │   └── tailwind.css    # Tailwind styles
-│   ├── public/             # Static assets
-│   └── vite.config.ts      # Vite config with API proxy
-│
+│   │   ├── components/
+│   │   │   └── graphs/ # Graph components
+│   │   │       ├── base/    # Reusable D3 primitives (LinePlot, Histogram)
+│   │   │       └── domain/  # Domain charts (Displacement, Sag, Travel) using base components
+│   │   ├── lib/             # Telemetry data utilities
+│   │   ├── routes/          # Remix routes (_index.tsx)
+│   │   ├── root.tsx         # Root component
+│   │   └── tailwind.css     # Tailwind styles
+│   ├── public/              # Static assets
+│   └── vite.config.ts       # Vite config with API proxy
+|
 ├── backend/                # NestJS backend
 │   ├── src/
 │   │   ├── database/       # Database schema & connection

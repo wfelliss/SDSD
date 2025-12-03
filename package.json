@@ -9,6 +9,7 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "postcss-nesting": "^13.0.2",
     "prettier": "^3.6.2",
     "turbo": "^2.6.0",
     "typescript": "5.9.2"
