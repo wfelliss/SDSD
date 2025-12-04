@@ -2,6 +2,11 @@
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useState, useEffect } from "react";
+// @ts-ignore
+import { DateRange } from "react-date-range";
+
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 
 type RunItem = {
   id: number;
@@ -12,7 +17,7 @@ type RunItem = {
   length?: number;
 };
 
-type RunJson = Record<string, any>; // generic JSON object
+type RunJson = Record<string, any>;
 
 // ---------------------- LOADER ----------------------
 export const loader = async () => {
@@ -33,12 +38,17 @@ export default function Runs() {
   const { runs } = useLoaderData<typeof loader>();
   const [selected, setSelected] = useState<RunItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [query, setQuery] = useState("")
-    const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingJson, setLoadingJson] = useState(false);
 
+  const [range, setRange] = useState([
+    { startDate: new Date(), endDate: new Date(), key: "selection" },
+  ]);
+
   const toggleRun = (run: RunItem) => {
-    if (!sidebarOpen) return; // do nothing if sidebar is closed
+    if (!sidebarOpen) return;
     const exists = selected.some((r) => r.id === run.id);
 
     if (exists) {
@@ -54,27 +64,41 @@ export default function Runs() {
   };
 
   const isCompareMode = selected.length > 1;
-  const filteredRuns = runs.filter(r =>
-    (r.title ?? "").toLowerCase().includes(query.toLowerCase())||
-    (r.location?? "").toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredRuns = runs.filter((r) => {
+    const titleMatch = (r.title ?? "").toLowerCase().includes(query.toLowerCase());
+    const locationMatch = (r.location ?? "").toLowerCase().includes(query.toLowerCase());
+    const dateMatch = r.date?.split("T")[0]?.includes(query);
+  
+    if (!range[0] || !datePickerOpen) return titleMatch || locationMatch ; 
+  
+    const runDate = r.date ? new Date(r.date) : null;
+    const start = range[0].startDate;
+    const end = range[0].endDate;
+  
+    const rangeMatch = runDate ? runDate >= start && runDate <= end : true;
+  
+    return (titleMatch || locationMatch || dateMatch) && rangeMatch;
+  });
+  
 
-
-
-  // Fetch JSON for selected runs
   useEffect(() => {
     const fetchJson = async (run: RunItem) => {
       setLoadingJson(true);
       try {
         const res = await fetch(
-          `http://localhost:3001/api/s3/file?path=${encodeURIComponent(run.srcPath)}`
+          `http://localhost:3001/api/s3/file?path=${encodeURIComponent(
+            run.srcPath
+          )}`
         );
         if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);
         const data = await res.json();
         setJsonData((prev) => ({ ...prev, [run.id]: data }));
       } catch (err) {
         console.error(err);
-        setJsonData((prev) => ({ ...prev, [run.id]: { error: (err as Error).message } }));
+        setJsonData((prev) => ({
+          ...prev,
+          [run.id]: { error: (err as Error).message },
+        }));
       } finally {
         setLoadingJson(false);
       }
@@ -107,43 +131,67 @@ export default function Runs() {
         </div>
 
         {sidebarOpen && (
-          <ul className="mt-2 space-y-2">
-            <li>
-            <input 
-            type="search"
-            placeholder="search..."
-            value = {query}
-            onChange={e => setQuery(e.target.value)}
-            className="block w-full pl-9 pr-3 py-2 text-sm text-gray-900 bg-gray-100 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400">
+          <div className="mt-2 space-y-2">
+            {/* Search */}
+            <input
+              type="search"
+              placeholder="search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="block w-full pl-9 pr-3 py-2 text-sm text-gray-900 bg-gray-100 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+            />
 
-            </input>
-            </li>
-                        {filteredRuns.map((run) => {
-              const selectedState = selected.some((r) => r.id === run.id);
-              return (
-                <li key={run.id}>
-                  <button
-                    onClick={() => toggleRun(run)}
-                    className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
-                      selectedState
-                        ? "bg-blue-600 text-white"
-                        : "hover:bg-gray-200 text-gray-800"
-                    }`}
-                    title={run.title ?? "Untitled Run"}
-                  >
-                    {run.title ?? "Untitled Run"}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+            {/* Date picker toggle */}
+            <button
+              onClick={() => setDatePickerOpen(!datePickerOpen) }
+              className="px-3 py-2 border rounded"
+            >
+              {datePickerOpen ? "Close Date Picker" : "Select Date"}
+            </button>
+
+            {datePickerOpen && (
+            <div className="mt-2 w-full max-w-xs overflow-hidden">
+            <div className="transform scale-90 origin-top-left -mb-4">
+              <DateRange
+              ranges={range}
+              onChange={(item: any) => setRange([item.selection])}
+              moveRangeOnFirstSelection={false}
+              />
+          </div>
+  </div>
+)}
+
+            {/* Runs list */}
+            <ul className="mt-2 space-y-1">
+              {filteredRuns.map((run) => {
+                const selectedState = selected.some((r) => r.id === run.id);
+                return (
+                  <li key={run.id}>
+                    <button
+                      onClick={() => toggleRun(run)}
+                      className={`flex items-center px-3 py-2 rounded w-full text-left transition ${
+                        selectedState
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-gray-200 text-gray-800"
+                      }`}
+                      title={run.title ?? "Untitled Run"}
+                    >
+                      {run.title ?? "Untitled Run"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </div>
 
       {/* Main content */}
       <div className="flex-1 p-6 overflow-auto">
         {selected.length === 0 ? (
-          <p className="text-gray-500">Select a run from the sidebar to see details.</p>
+          <p className="text-gray-500">
+            Select a run from the sidebar to see details.
+          </p>
         ) : (
           <div>
             <h2 className="text-2xl font-bold mb-4">
@@ -170,7 +218,9 @@ export default function Runs() {
               ) : (
                 selected.map((r) => (
                   <div key={r.id} className="mb-4">
-                    <h3 className="font-semibold mb-1">{r.title ?? "Untitled Run"} JSON</h3>
+                    <h3 className="font-semibold mb-1">
+                      {r.title ?? "Untitled Run"} JSON
+                    </h3>
                     <pre className="text-sm overflow-auto bg-white p-2 rounded border">
                       {jsonData[r.id]
                         ? JSON.stringify(jsonData[r.id], null, 2)
