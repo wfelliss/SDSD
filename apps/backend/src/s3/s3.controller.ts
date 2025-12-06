@@ -144,7 +144,7 @@ export class S3Controller {
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
 
-    //build json file
+    // build json file
     const json = {
       "gyroscope": {
         "axis1": columns[0] || [],
@@ -164,10 +164,12 @@ export class S3Controller {
     };
     const jsonBuffer = Buffer.from(JSON.stringify(json));
 
-    // Determine key: use metadata.run_name or original filename or generated
+    // Determine key: use metadata.run_name or original filename (but store as .json)
     const datePart = new Date().toISOString().slice(0, 10);
     const runName = metadata?.run_name || file.originalname;
-    const initialKey = metadata?.key || `run_data/${datePart}/${encodeURIComponent(String(runName))}`;
+    // strip existing extension from runName so we always store a .json file
+    const filenameBase = String(runName).replace(/\.[^/.]+$/, '');
+    const initialKey = metadata?.key || `run_data/${datePart}/${encodeURIComponent(filenameBase)}.json`;
     console.log('🔑 Initial S3 key:', initialKey);
 
     try {
@@ -188,9 +190,10 @@ export class S3Controller {
       const key = await this.ensureUniqueKey(initialKey);
       console.log('✅ Final S3 key (unique):', key);
 
-      console.log('⬆️  Uploading to S3...');
-      await this.s3Service.uploadBuffer(key, file.buffer, file.mimetype || 'application/octet-stream');
-      console.log('✅ File uploaded to S3 successfully');
+      console.log('⬆️  Uploading JSON to S3...');
+      // Upload the generated JSON buffer as application/json
+      await this.s3Service.uploadBuffer(key, jsonBuffer, 'application/json');
+      console.log('✅ JSON uploaded to S3 successfully');
 
       const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
