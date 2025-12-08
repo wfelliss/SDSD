@@ -89,35 +89,89 @@ export class S3Controller {
     }
   }
 
+  private parseCsvToColumnArrays(csv: string) {
+    const rows = csv.trim().split('\n').map(r => r.split(','));
+
+    const header = rows[0];
+    const numCols = header.length;
+
+    // Prepare an array per column
+    const columns: any[][] = Array.from({ length: numCols }, () => []);
+
+    // Fill columns
+    for (let r = 1; r < rows.length; r++) {
+      for (let c = 0; c < numCols; c++) {
+        const raw = rows[r][c]?.trim() ?? '';
+
+        // Try to parse JSON array; if fails, use raw value
+        try {
+          columns[c].push(JSON.parse(raw));
+        } catch {
+          columns[c].push(raw);
+        }
+      }
+    }
+
+    return columns;
+  }
+
   /**
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
    */
   @Post('newRunFile')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-  async newRunFile(@UploadedFile() file: Express.Multer.File) {
+  async newRunFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('metadata') metadataJson?: string,) {
     if (!file || !file.buffer) {
       throw new BadRequestException('Missing uploaded file in `file` field');
     }
+    console.log('📁 CSV received:', file.originalname, `(${file.size} bytes)`);
 
-    console.log('📁 File received:', file.originalname, `(${file.size} bytes)`);
-
+    // Parse metadata JSON if provided
     let metadata: any = {};
-    try {
-      const fileContent = JSON.parse(file.buffer.toString('utf-8'));
-      if (fileContent.metadata) {
-        metadata = fileContent.metadata;
+    if (metadataJson) {
+      try {
+        metadata = JSON.parse(metadataJson);
+        console.log('📝 Metadata received:', JSON.stringify(metadata, null, 2));
+      } catch (err) {
+        console.warn('⚠️  Failed to parse metadata JSON:', (err as Error).message);
       }
-      console.log('📋 Metadata extracted:', JSON.stringify(metadata, null, 2));
-    } catch (e) {
-      // ignore parse error and use empty metadata
-      console.warn('⚠️  Failed to parse file or extract metadata:', (e as Error).message);
     }
+    // Convert new csv into json format
+    const csvContent = file.buffer.toString('utf-8');
+    const columns = this.parseCsvToColumnArrays(csvContent);
+    console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
 
-    // Determine key: use metadata.run_name or original filename or generated
+    // build json file
+    const json = {
+      "data": {
+        "gyroscope": {
+          "axis1": columns[0] || [],
+          "axis2": columns[1] || [],
+          "axis3": columns[2] || [],
+        },
+        "accelerometer": {
+          "axis1": columns[3] || [],
+          "axis2": columns[4] || [],
+          "axis3": columns[5] || [],
+        },
+        "suspension": {
+          "rear_sus": columns[6] || [],
+          "front_sus": columns[7] || [],
+        },
+      },
+      metadata,
+    };
+    const jsonBuffer = Buffer.from(JSON.stringify(json));
+
+    // Determine key: use metadata.run_name or original filename (but store as .json)
     const datePart = new Date().toISOString().slice(0, 10);
     const runName = metadata?.run_name || file.originalname;
-    const initialKey = metadata?.key || `run_data/${datePart}/${encodeURIComponent(String(runName))}`;
+    // strip existing extension from runName so we always store a .json file
+    const filenameBase = String(runName).replace(/\.[^/.]+$/, '');
+    const initialKey = metadata?.key || `run_data/${datePart}/${encodeURIComponent(filenameBase)}.json`;
     console.log('🔑 Initial S3 key:', initialKey);
 
     try {
@@ -138,9 +192,10 @@ export class S3Controller {
       const key = await this.ensureUniqueKey(initialKey);
       console.log('✅ Final S3 key (unique):', key);
 
-      console.log('⬆️  Uploading to S3...');
-      await this.s3Service.uploadBuffer(key, file.buffer, file.mimetype || 'application/octet-stream');
-      console.log('✅ File uploaded to S3 successfully');
+      console.log('⬆️  Uploading JSON to S3...');
+      // Upload the generated JSON buffer as application/json
+      await this.s3Service.uploadBuffer(key, jsonBuffer, 'application/json');
+      console.log('✅ JSON uploaded to S3 successfully');
 
       const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
