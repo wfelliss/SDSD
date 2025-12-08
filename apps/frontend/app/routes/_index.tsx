@@ -176,30 +176,44 @@ interface ChartSectionProps {
 }
 
 function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSectionProps) {
-  const getRunData = (id: number) => jsonData[id];
+  if (!selected || selected.length === 0) {
+    return <SectionHeader>No run selected</SectionHeader>;
+  }
+
+  const first = selected[0] || null;            // Safe now
+  const second = selected[1] || null;   // Could be null in single mode
+
+  const firstData = first ? jsonData[first.id] : null; // Safe
+  const secondData = second ? jsonData[second.id] : null;
+
+  const getFreq = (data: any, key: "front_sus" | "rear_sus") =>
+    Number(data?.metadata?.sample_frequency?.[key] ?? 1);
+
 
   return (
     <section>
       <SectionHeader>Displacement Plot</SectionHeader>
 
-      {/* Compare Mode */}
       {isCompareMode ? (
         <div className="grid grid-cols-1 gap-6 w-full">
+
           {/* Plot 1: Front Fork Comparison */}
           <DisplacementPlot
             title="Front Fork Comparison"
             dynamicSag={{
-              front: getRunData(selected[0].id)?.data?.suspension?.front_sus,
-              rear: getRunData(selected[1].id)?.data?.suspension?.front_sus,
+              front: firstData?.data?.suspension?.front_sus,
+              rear: secondData?.data?.suspension?.front_sus,
             }}
             series={selected.map((run, i) => {
-              const data = getRunData(run.id);
-              if (!data || data.error) return { label: "Loading...", rawData: [], freq: 1 };
+              const data = jsonData[run.id];
+              if (!data || data.error) {
+                return { label: "Loading...", rawData: [], freq: 1, color: "" };
+              }
               return {
                 label: run.title || `Run ${run.id}`,
                 color: i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
                 rawData: data.data.suspension.front_sus,
-                freq: Number(data.metadata.sample_frequency?.front_sus || 1),
+                freq: getFreq(data, "front_sus"),
               };
             })}
           />
@@ -208,47 +222,44 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
           <DisplacementPlot
             title="Rear Shock Comparison"
             dynamicSag={{
-              front: getRunData(selected[0].id)?.data?.suspension?.rear_sus,
-              rear: getRunData(selected[1].id)?.data?.suspension?.rear_sus,
+              front: firstData?.data?.suspension?.rear_sus,
+              rear: secondData?.data?.suspension?.rear_sus,
             }}
             series={selected.map((run, i) => {
-              const data = getRunData(run.id);
-              if (!data || data.error) return { label: "Loading...", rawData: [], freq: 1 };
+              const data = jsonData[run.id];
+              if (!data || data.error) {
+                return { label: "Loading...", rawData: [], freq: 1, color: "" };
+              }
               return {
                 label: run.title || `Run ${run.id}`,
                 color: i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
                 rawData: data.data.suspension.rear_sus,
-                freq: Number(data.metadata.sample_frequency?.rear_sus || 1),
+                freq: getFreq(data, "rear_sus"),
               };
             })}
           />
+
         </div>
       ) : (
-        /* Single Mode: Front vs Rear */
-        jsonData[selected[0].id] &&
-        !jsonData[selected[0].id].error && (
+        firstData && !firstData.error && (
           <DisplacementPlot
             title="Suspension Displacement"
             dynamicSag={{
-              front: jsonData[selected[0].id].data.suspension.front_sus,
-              rear: jsonData[selected[0].id].data.suspension.rear_sus,
+              front: firstData.data.suspension.front_sus,
+              rear: firstData.data.suspension.rear_sus,
             }}
             series={[
               {
                 label: "Front Fork",
                 color: "hsl(var(--chart-1))",
-                rawData: jsonData[selected[0].id].data.suspension.front_sus,
-                freq: Number(
-                  jsonData[selected[0].id].metadata.sample_frequency?.front_sus || 1
-                ),
+                rawData: firstData.data.suspension.front_sus,
+                freq: getFreq(firstData, "front_sus"),
               },
               {
                 label: "Rear Shock",
                 color: "hsl(var(--chart-2))",
-                rawData: jsonData[selected[0].id].data.suspension.rear_sus,
-                freq: Number(
-                  jsonData[selected[0].id].metadata.sample_frequency?.rear_sus || 1
-                ),
+                rawData: firstData.data.suspension.rear_sus,
+                freq: getFreq(firstData, "rear_sus"),
               },
             ]}
           />
@@ -329,7 +340,6 @@ function MainContent({
   loadingJson,
   isCompareMode,
 }: MainContentProps) {
-  
   if (selected.length === 0) {
     return (
       <main className="flex-1 overflow-y-auto p-8 bg-background">
@@ -337,6 +347,17 @@ function MainContent({
       </main>
     );
   }
+
+  // Collect any fetch errors for the currently selected runs.
+  const fetchErrors = selected
+    .map((run) => {
+      const data = jsonData[run.id];
+      if (data && data.error) {
+        return { id: run.id, title: run.title, message: String(data.error) };
+      }
+      return null;
+    })
+    .filter(Boolean) as { id: number; title: string | null; message: string }[];
 
   if (loadingJson) {
     return (
@@ -349,25 +370,50 @@ function MainContent({
   return (
     <main className="flex-1 overflow-y-auto p-8 bg-background">
       <div className="w-full pb-20">
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            {isCompareMode ? "Run Comparison" : selected[0].title || "Run Details"}
-          </h1>
-        </div>
+        {/* Error banner for any fetch errors */}
+        {fetchErrors.length > 0 && (
+          <div
+            role="alert"
+            className="mb-6 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700"
+          >
+            <strong className="block font-medium">Error loading run data</strong>
+            <ul className="mt-2 list-disc list-inside">
+              {fetchErrors.map((e) => (
+                <li key={e.id}>
+                  {e.title ? `${e.title}: ` : `Run ${e.id}: `}
+                  {e.message}
+                  {'\n'}
+                  {" Please check the backend server and S3 storage are running and connected."}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fetchErrors.length === 0 && (
+          <>
+            <div className="mb-8">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+                {isCompareMode ? "Run Comparison" : selected[0]?.title || "Run Details"}
+              </h1>
+            </div>
 
-        <DisplacementSection
-          selected={selected}
-          jsonData={jsonData}
-          isCompareMode={isCompareMode}
-        />
+            <DisplacementSection
+              selected={selected}
+              jsonData={jsonData}
+              isCompareMode={isCompareMode}
+            />
 
-        <SectionDivider />
+            <SectionDivider />
 
-        <HistogramSection
-          selected={selected}
-          jsonData={jsonData}
-          isCompareMode={isCompareMode}
-        />
+            <HistogramSection
+              selected={selected}
+              jsonData={jsonData}
+              isCompareMode={isCompareMode}
+            />
+          </>
+        )}
+
+
       </div>
     </main>
   );
