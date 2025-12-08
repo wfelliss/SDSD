@@ -146,19 +146,21 @@ export class S3Controller {
 
     // build json file
     const json = {
-      "gyroscope": {
-        "axis1": columns[0] || [],
-        "axis2": columns[1] || [],
-        "axis3": columns[2] || [],
-      },
-      "accelerometer": {
-        "axis1": columns[3] || [],
-        "axis2": columns[4] || [],
-        "axis3": columns[5] || [],
-      },
-      "suspension": {
-        "rear_sus": columns[6] || [],
-        "front_sus": columns[7] || [],
+      "data": {
+        "gyroscope": {
+          "axis1": columns[0] || [],
+          "axis2": columns[1] || [],
+          "axis3": columns[2] || [],
+        },
+        "accelerometer": {
+          "axis1": columns[3] || [],
+          "axis2": columns[4] || [],
+          "axis3": columns[5] || [],
+        },
+        "suspension": {
+          "rear_sus": columns[6] || [],
+          "front_sus": columns[7] || [],
+        },
       },
       metadata,
     };
