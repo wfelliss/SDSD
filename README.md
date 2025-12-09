@@ -44,9 +44,12 @@ docker-compose down
 
 ### 4. Set Up Backend Environment
 
+- You will need to request the S3 bucket details from Will Ellis, email him on wellis3@sheffield.ac.uk, Without these the website will not work
+
 ```bash
 # Copy environment file
 cp apps/backend/.env.example apps/backend/.env
+# Fill this environment file with the contents recieved by Will E
 
 # Generate and run database migrations
 cd apps/backend
@@ -149,12 +152,17 @@ bun run check-types          # Type check all packages
 apps/
 ├── frontend/                # Remix frontend
 │   ├── app/
-│   │   ├── routes/         # Remix routes
-│   │   ├── root.tsx        # Root component
-│   │   └── tailwind.css    # Tailwind styles
-│   ├── public/             # Static assets
-│   └── vite.config.ts      # Vite config with API proxy
-│
+│   │   ├── components/
+│   │   │   └── graphs/ # Graph components
+│   │   │       ├── base/    # Reusable D3 primitives (LinePlot, Histogram)
+│   │   │       └── domain/  # Domain charts (Displacement, Sag, Travel) using base components
+│   │   ├── lib/             # Telemetry data utilities
+│   │   ├── routes/          # Remix routes (_index.tsx)
+│   │   ├── root.tsx         # Root component
+│   │   └── tailwind.css     # Tailwind styles
+│   ├── public/              # Static assets
+│   └── vite.config.ts       # Vite config with API proxy
+|
 ├── backend/                # NestJS backend
 │   ├── src/
 │   │   ├── database/       # Database schema & connection
