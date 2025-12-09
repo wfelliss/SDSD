@@ -20,16 +20,13 @@ type RunJson = Record<string, any>;
 
 // ---------- Loader ----------
 export const loader = async () => {
-  const backendURL =
-    process.env.BACKEND_URL || "http://localhost:3001/api/runs/";
-
-  const res = await fetch(backendURL);
+  const res = await fetch("http://localhost:3001/api/runs");
   if (!res.ok) {
     throw new Response("Failed to fetch runs", { status: res.status });
   }
 
   const runs: RunItem[] = await res.json();
-  return json({ runs });
+  return { runs };
 };
 
 // ---------------------- UI components ----------------------
@@ -111,7 +108,9 @@ function Sidebar({ runs, selected, setSelected }: SidebarProps) {
   return (
     <div className="w-64 h-svh p-4 flex flex-col gap-4 bg-slate-50 border-r border-slate-100 text-slate-800">
       <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-xl text-slate-700">Select runs to compare</h1>
+        <h1 className="font-semibold text-xl text-slate-700">
+          Select runs to compare
+        </h1>
         <h2 className="text-sm text-slate-500">You can compare up to 2 runs</h2>
       </div>
       <ul className="flex flex-col">
@@ -134,7 +133,11 @@ interface SidebarMenuButtonProps {
   setSelected: (runs: RunItem[]) => void;
 }
 
-function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProps) {
+function SidebarMenuButton({
+  run,
+  selected,
+  setSelected,
+}: SidebarMenuButtonProps) {
   const isSelected = selected.some((r) => r.id === run.id);
 
   const toggle = () => {
@@ -157,7 +160,9 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
             isSelected && "bg-indigo-700"
           )}
         >
-          {isSelected && <CheckIcon className="size-full text-white" strokeWidth={4} />}
+          {isSelected && (
+            <CheckIcon className="size-full text-white" strokeWidth={4} />
+          )}
         </div>
         <span className="text-sm">{run.title}</span>
       </div>
@@ -175,13 +180,17 @@ interface ChartSectionProps {
   isCompareMode: boolean;
 }
 
-function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSectionProps) {
+function DisplacementSection({
+  selected,
+  jsonData,
+  isCompareMode,
+}: ChartSectionProps) {
   if (!selected || selected.length === 0) {
     return <SectionHeader>No run selected</SectionHeader>;
   }
 
-  const first = selected[0] || null;            // Safe now
-  const second = selected[1] || null;   // Could be null in single mode
+  const first = selected[0] || null; // Safe now
+  const second = selected[1] || null; // Could be null in single mode
 
   const firstData = first ? jsonData[first.id] : null; // Safe
   const secondData = second ? jsonData[second.id] : null;
@@ -189,14 +198,12 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
   const getFreq = (data: any, key: "front_sus" | "rear_sus") =>
     Number(data?.metadata?.sample_frequency?.[key] ?? 1);
 
-
   return (
     <section>
       <SectionHeader>Displacement Plot</SectionHeader>
 
       {isCompareMode ? (
         <div className="grid grid-cols-1 gap-6 w-full">
-
           {/* Plot 1: Front Fork Comparison */}
           <DisplacementPlot
             title="Front Fork Comparison"
@@ -238,10 +245,10 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
               };
             })}
           />
-
         </div>
       ) : (
-        firstData && !firstData.error && (
+        firstData &&
+        !firstData.error && (
           <DisplacementPlot
             title="Suspension Displacement"
             dynamicSag={{
@@ -269,7 +276,11 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
   );
 }
 
-function HistogramSection({ selected, jsonData, isCompareMode }: ChartSectionProps) {
+function HistogramSection({
+  selected,
+  jsonData,
+  isCompareMode,
+}: ChartSectionProps) {
   return (
     <section>
       <SectionHeader>Travel Histogram</SectionHeader>
@@ -286,7 +297,9 @@ function HistogramSection({ selected, jsonData, isCompareMode }: ChartSectionPro
                 title={isCompareMode ? `Front: ${run.title}` : "Front Travel"}
                 rawData={data.data.suspension.front_sus}
                 colorClass={i === 0 ? "fill-chart-1" : "fill-chart-2"}
-                hoverColorClass={i === 0 ? "fill-chart-1-hover" : "fill-chart-2-hover"}
+                hoverColorClass={
+                  i === 0 ? "fill-chart-1-hover" : "fill-chart-2-hover"
+                }
               />
             );
           })}
@@ -301,14 +314,14 @@ function HistogramSection({ selected, jsonData, isCompareMode }: ChartSectionPro
             const colorFill = !isCompareMode
               ? "fill-chart-2"
               : i === 0
-              ? "fill-chart-1"
-              : "fill-chart-2";
+                ? "fill-chart-1"
+                : "fill-chart-2";
 
             const colorHover = !isCompareMode
               ? "fill-chart-2-hover"
               : i === 0
-              ? "fill-chart-1-hover"
-              : "fill-chart-2-hover";
+                ? "fill-chart-1-hover"
+                : "fill-chart-2-hover";
 
             return (
               <TravelHistogram
@@ -376,14 +389,18 @@ function MainContent({
             role="alert"
             className="mb-6 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700"
           >
-            <strong className="block font-medium">Error loading run data</strong>
+            <strong className="block font-medium">
+              Error loading run data
+            </strong>
             <ul className="mt-2 list-disc list-inside">
               {fetchErrors.map((e) => (
                 <li key={e.id}>
                   {e.title ? `${e.title}: ` : `Run ${e.id}: `}
                   {e.message}
-                  {'\n'}
-                  {" Please check the backend server and S3 storage are running and connected."}
+                  {"\n"}
+                  {
+                    " Please check the backend server and S3 storage are running and connected."
+                  }
                 </li>
               ))}
             </ul>
@@ -393,7 +410,9 @@ function MainContent({
           <>
             <div className="mb-8">
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isCompareMode ? "Run Comparison" : selected[0]?.title || "Run Details"}
+                {isCompareMode
+                  ? "Run Comparison"
+                  : selected[0]?.title || "Run Details"}
               </h1>
             </div>
 
@@ -412,8 +431,6 @@ function MainContent({
             />
           </>
         )}
-
-
       </div>
     </main>
   );
