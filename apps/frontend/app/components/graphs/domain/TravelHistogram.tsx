@@ -18,7 +18,6 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
   height = 160
 }) => {
   
-  // use telemetry utility
   const histData = useMemo(() => {
     return processHistogramData(rawData);
   }, [rawData]);
@@ -29,7 +28,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
 
   return (
     <div className="w-full">
-      <Histogram // use base Histogram component
+      <Histogram 
         data={histData} 
         xDomain={[0, 100]}
         height={height} 
