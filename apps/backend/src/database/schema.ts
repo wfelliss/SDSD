@@ -24,9 +24,9 @@ export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   front_min: integer("front_min").notNull().default(0),
-  front_max: integer("front_max").notNull().default(1024),
+  front_max: integer("front_max").notNull().default(4096),
   back_min: integer("back_min").notNull().default(0),
-  back_max: integer("back_max").notNull().default(1024),
+  back_max: integer("back_max").notNull().default(4096),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
