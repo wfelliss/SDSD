@@ -4,6 +4,7 @@ import { runs, users } from "./src/database/schema";
 
 async function seed() {
   const connectionString =
+    process.env.DATABASE_URL ||
     "postgresql://postgres:password@localhost:5432/nestjs_app";
   const client = postgres(connectionString);
   const db = drizzle(client);
