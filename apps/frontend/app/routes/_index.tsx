@@ -21,7 +21,8 @@ type RunJson = Record<string, any>;
 // ---------- Loader ----------
 export const loader = async () => {
   const backendURL =
-    process.env.BACKEND_URL || "http://localhost:3001/api/runs/";
+    // Use Vite env var exposed to the client build. Fallback to localhost for dev.
+    (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:3001/api/runs/";
 
   const res = await fetch(backendURL);
   if (!res.ok) {
@@ -65,8 +66,10 @@ export default function Runs() {
     const fetchJson = async (run: RunItem) => {
       setLoadingJson(true);
       try {
+        const s3FileBase = (import.meta.env.VITE_S3_FILE_URL as string) ||
+          "http://localhost:3001/api/s3/file";
         const res = await fetch(
-          `http://localhost:3001/api/s3/file?path=${encodeURIComponent(run.srcPath)}`
+          `${s3FileBase}?path=${encodeURIComponent(run.srcPath)}`
         );
         if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);
         const data = await res.json();
