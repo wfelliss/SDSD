@@ -1,4 +1,4 @@
-export const MAX_TRAVEL = 1024; // replace with rider max travel data 
+export const MAX_TRAVEL = 4096; // replace with rider max travel data 
 const WINDOWMS = 500 // histogram window length - usually 100ms to 300ms window
 
 export type RawSuspensionData = number | { displacement: number; timebase?: number };
