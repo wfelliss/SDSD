@@ -8,6 +8,7 @@ export interface DataPoint {
 
 interface LinePlotProps {
   data: DataPoint[][];
+  sampleFrequency?: number;
   yDomain?: [number, number];
   height?: number;
   className?: string;
@@ -16,6 +17,7 @@ interface LinePlotProps {
 
 export const LinePlot: React.FC<LinePlotProps> = ({
   data,
+  sampleFrequency = 1000,
   yDomain = [0, 100],
   height = 400,
   className = "",
@@ -94,9 +96,6 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         .attr("class", "axis axis--x text-muted-foreground text-xs")
         .attr("transform", `translate(0,${innerHeight})`);
       const yAxisGroup = focus.append("g").attr("class", "axis axis--y text-muted-foreground text-xs");
-      const xAxis2Group = context.append("g")
-        .attr("class", "axis axis--x text-muted-foreground text-xs")
-        .attr("transform", `translate(0,${innerHeight2})`);
 
       const brush = d3.brushX()
         .extent([[0, 0], [innerWidth, innerHeight2]])
@@ -113,19 +112,18 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         context, 
         xAxisGroup, 
         yAxisGroup, 
-        xAxis2Group,
         brush,       
         brushGroup   
       };
     }
 
     // Updates
-    const { x, y, x2, focus, context, xAxisGroup, yAxisGroup, xAxis2Group, brush, brushGroup } = contextRef.current;
+    const { x, y, x2, focus, context, xAxisGroup, yAxisGroup, brush, brushGroup } = contextRef.current;
 
     svg.select("#clip rect").attr("width", innerWidth);
 
-    const allPoints = data.flat();
-    const xMax = d3.max(allPoints, (d) => d.x) || 0;
+    const maxPoints = data.reduce((mx, series) => Math.max(mx, series.length), 0);
+    const xMax = maxPoints / sampleFrequency;
     
     x.range([0, innerWidth]).domain([0, xMax]);
     y.range([innerHeight, 0]).domain(yDomain);
@@ -134,7 +132,6 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 
     xAxisGroup!.call(d3.axisBottom(x));
     yAxisGroup!.call(d3.axisLeft(y).ticks(5));
-    xAxis2Group!.call(d3.axisBottom(x2));
 
     const lineGenerator = d3.line<DataPoint>().x((d) => x(d.x)).y((d) => y(d.y));
     const lineGenerator2 = d3.line<DataPoint>().x((d) => x2(d.x)).y((d) => y2(d.y));
