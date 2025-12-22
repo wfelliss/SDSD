@@ -1,14 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
-export interface HistogramBin {
-  x0: number;
-  x1: number;
-  percent: number;
-}
-
 export interface HistogramProps {
-  bins: HistogramBin[];
+  data: number[];
   height?: number;
   xDomain?: [number, number];
   className?: string;
@@ -18,7 +12,7 @@ export interface HistogramProps {
 }
 
 export const Histogram: React.FC<HistogramProps> = ({ 
-  bins, 
+  data, 
   height = 500, 
   xDomain,
   className = "",
@@ -46,7 +40,7 @@ export const Histogram: React.FC<HistogramProps> = ({
 
   // Main D3 Logic
   useEffect(() => {
-    if (!bins || bins.length === 0 || width === 0 || !containerRef.current) return;
+    if (!data || width === 0 || !containerRef.current) return;
 
     const margin = { top: 20, right: 20, bottom: 40, left: 40 };
     const innerWidth = width - margin.left - margin.right;
@@ -87,14 +81,23 @@ export const Histogram: React.FC<HistogramProps> = ({
     svg.attr("width", width).attr("height", height);
 
     // Determine Domain
-    const finalDomain = xDomain || [0, 100];
+    const finalDomain = xDomain || (d3.extent(data) as [number, number]);
     const dMin = finalDomain[0] ?? 0;
     const dMax = finalDomain[1] ?? 100; 
 
     x.range([0, innerWidth]).domain([dMin, dMax]);
+    
+    if (!xDomain) x.nice();
+
+    // Calculate Bins
+    const histogramGenerator = d3.bin()
+        .domain(x.domain() as [number, number])
+        .thresholds(x.ticks(20)); // 20 bins for 5% range
+
+    const bins = histogramGenerator(data);
 
     // Update Y Scale 
-    const yMax = d3.max(bins, d => d.percent) || 0;
+    const yMax = d3.max(bins, d => d.length) || 0;
     y.range([innerHeight, 0]).domain([0, yMax]);
 
     // Draw X Axis
@@ -121,8 +124,8 @@ export const Histogram: React.FC<HistogramProps> = ({
       .data(bins)
       .join(
         (enter: any) => enter.append("rect")
-            .attr("x", (d: HistogramBin) => x(d.x0) + 1)
-            .attr("width", (d: HistogramBin) => Math.max(0, x(d.x1) - x(d.x0) - 1))
+            .attr("x", (d: any) => x(d.x0!) + 1)
+            .attr("width", (d: any) => Math.max(0, x(d.x1!) - x(d.x0!) - 1))
             .attr("y", innerHeight)
             .attr("height", 0)
             .attr("rx", 2)
@@ -131,12 +134,13 @@ export const Histogram: React.FC<HistogramProps> = ({
         (exit: any) => exit.transition().duration(500).attr("y", innerHeight).attr("height", 0).remove()
       )
       .attr("class", `bar-rect cursor-pointer transition-colors duration-200 ${colorClass}`)
-      .on("mouseenter", function(event: any, d: HistogramBin) {
+      .on("mouseenter", function(event: any, d: any) {
           d3.select(this).attr("class", `bar-rect cursor-pointer ${hoverColorClass}`);
           
           tooltip.style("opacity", 1)
                 .html(`
-                  <div class="font-bold text-gray-900">${d.percent}%</div>
+                  <div class="font-bold text-gray-900">${d.length}</div>
+                  <div class="text-xs text-gray-500">Range: ${d.x0} - ${d.x1}</div>
                 `);
       })
       .on("mousemove", (event: any) => {
@@ -148,12 +152,12 @@ export const Histogram: React.FC<HistogramProps> = ({
           tooltip.style("opacity", 0);
       })
       .transition().duration(750).ease(d3.easeCubicOut)
-      .attr("x", (d: HistogramBin) => x(d.x0) + 1)
-      .attr("width", (d: HistogramBin) => Math.max(0, x(d.x1) - x(d.x0) - 1))
-      .attr("y", (d: HistogramBin) => y(d.percent))
-      .attr("height", (d: HistogramBin) => innerHeight - y(d.percent));
+      .attr("x", (d: any) => x(d.x0!) + 1)
+      .attr("width", (d: any) => Math.max(0, x(d.x1!) - x(d.x0!) - 1))
+      .attr("y", (d: any) => y(d.length))
+      .attr("height", (d: any) => innerHeight - y(d.length));
 
-  }, [bins, width, height, colorClass, hoverColorClass, xDomain]); 
+  }, [data, width, height, colorClass, hoverColorClass, xDomain]); 
 
   return (
     <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative w-full ${className}`} ref={containerRef}>
