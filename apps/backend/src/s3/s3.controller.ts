@@ -203,7 +203,8 @@ export class S3Controller {
       const lengthVal = typeof metadata?.run_time === 'number' ? Math.floor(metadata.run_time) : (metadata?.run_time ? Number(metadata.run_time) : 0);
 
       // Use the filename (last segment of the key) as the run title
-      const title = key.split('/').pop() ?? key;
+      const title = (key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
+
 
       const runData = {
         srcPath: s3Url,
