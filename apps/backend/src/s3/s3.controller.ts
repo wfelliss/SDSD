@@ -213,6 +213,8 @@ export class S3Controller {
         length: Number.isFinite(lengthVal) ? Math.floor(lengthVal) : 0,
         date: metadata?.date ? new Date(metadata.date) : undefined,
         location: metadata?.location ?? null,
+        front_freq: metadata?.front_freq ?? 100, // 100 is the default freq on esp
+        rear_freq: metadata?.rear_freq ?? 100,
       };
 
       console.log('💾 Creating database record with data:', JSON.stringify(runData, null, 2));

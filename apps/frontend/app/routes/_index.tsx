@@ -13,6 +13,8 @@ type RunItem = {
   srcPath: string;
   date?: string;
   location?: string;
+  front_freq?: number;
+  rear_freq?: number;
   length?: number;
 };
 
@@ -189,10 +191,6 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
   const firstData = first ? jsonData[first.id] : null; // Safe
   const secondData = second ? jsonData[second.id] : null;
 
-  const getFreq = (data: any, key: "front_sus" | "rear_sus") =>
-    Number(data?.metadata?.sample_frequency?.[key] ?? 1);
-
-
   return (
     <section>
       <SectionHeader>Displacement Plot</SectionHeader>
@@ -216,7 +214,7 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
                 label: run.title || `Run ${run.id}`,
                 color: i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
                 rawData: data.data.suspension.front_sus,
-                freq: getFreq(data, "front_sus"),
+                freq: run.front_freq || 100
               };
             })}
           />
@@ -237,7 +235,7 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
                 label: run.title || `Run ${run.id}`,
                 color: i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
                 rawData: data.data.suspension.rear_sus,
-                freq: getFreq(data, "rear_sus"),
+                freq: run.rear_freq || 100
               };
             })}
           />
@@ -256,13 +254,13 @@ function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSection
                 label: "Front Fork",
                 color: "hsl(var(--chart-1))",
                 rawData: firstData.data.suspension.front_sus,
-                freq: getFreq(firstData, "front_sus"),
+                freq: first?.front_freq || 100
               },
               {
                 label: "Rear Shock",
                 color: "hsl(var(--chart-2))",
                 rawData: firstData.data.suspension.rear_sus,
-                freq: getFreq(firstData, "rear_sus"),
+                freq: first?.rear_freq || 100
               },
             ]}
           />

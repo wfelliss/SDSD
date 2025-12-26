@@ -29,6 +29,13 @@
       "when": 1763062056624,
       "tag": "0003_chilly_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1766780848027,
+      "tag": "0004_plain_randall",
+      "breakpoints": true
     }
   ]
 }
