@@ -21,7 +21,8 @@ export const runs = pgTable("runs", {
   length: integer("length").notNull(),   // e.g. number of samples, seconds, etc.
   date: timestamp("date").defaultNow().notNull(),  // run date/time
   location: varchar("location", { length: 255 }),  // place or tag for run
-
+  front_freq: integer("front_freq"),     // front suspension sample frequency
+  rear_freq: integer("rear_freq"),       // rear suspension sample frequency
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -21,6 +21,8 @@ async function seed() {
         "length": 2184,
         "date": "2025-11-13T18:53:58.985Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:53:59.018Z"
     },
     {
@@ -31,6 +33,8 @@ async function seed() {
         "length": 58727,
         "date": "2025-11-13T18:54:23.706Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:54:23.707Z"
     },
     {
@@ -41,6 +45,8 @@ async function seed() {
         "length": 5556,
         "date": "2025-11-13T18:54:46.319Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:54:46.290Z"
     },
     {
@@ -51,6 +57,8 @@ async function seed() {
         "length": 58167,
         "date": "2025-11-13T18:55:07.660Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:55:07.626Z"
     },
     {
@@ -61,6 +69,8 @@ async function seed() {
         "length": 57722,
         "date": "2025-11-13T18:55:35.659Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:55:35.635Z"
     },
     {
@@ -71,6 +81,8 @@ async function seed() {
         "length": 54606,
         "date": "2025-11-13T18:56:12.004Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:56:11.960Z"
     },
     {
@@ -81,6 +93,8 @@ async function seed() {
         "length": 63191,
         "date": "2025-11-13T18:56:34.814Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:56:34.801Z"
     },
     {
@@ -91,6 +105,8 @@ async function seed() {
         "length": 55112,
         "date": "2025-11-13T18:56:54.752Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:56:54.773Z"
     },
     {
@@ -101,6 +117,8 @@ async function seed() {
         "length": 56679,
         "date": "2025-11-13T18:57:12.942Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:57:12.899Z"
     },
     {
@@ -111,6 +129,8 @@ async function seed() {
         "length": 16864,
         "date": "2025-11-13T18:57:27.966Z",
         "location": null,
+        "front_freq": 250,
+        "rear_freq": 250,
         "createdAt": "2025-11-13T18:57:27.984Z"
     }
   ];
@@ -124,6 +144,8 @@ async function seed() {
         length: Number.isFinite(runItem.length) ? runItem.length : 0,
         date: runItem.date ? new Date(runItem.date) : new Date(),
         location: runItem.location ?? null,
+        front_freq: runItem.front_freq ?? 250,
+        rear_freq: runItem.rear_freq ?? 250,
         createdAt: runItem.createdAt ? new Date(runItem.createdAt) : new Date(),
       })
       .onConflictDoNothing(); // ← ignores duplicates automatically
