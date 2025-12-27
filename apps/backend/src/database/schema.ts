@@ -18,7 +18,7 @@ export const runs = pgTable("runs", {
   srcPath: varchar("src_path", { length: 1024 }).notNull().unique(),   // e.g. file path to source
   title: varchar("title", { length: 255 }),
   comments: text("comments"),            // optional notes
-  length: integer("length").notNull(),   // e.g. number of samples, seconds, etc.
+  length: integer("length").notNull(),   // number of samples recorded for each sensor, not the time duration
   date: timestamp("date").defaultNow().notNull(),  // run date/time
   location: varchar("location", { length: 255 }),  // place or tag for run
   front_freq: integer("front_freq"),     // front suspension sample frequency
