@@ -143,7 +143,6 @@ export class S3Controller {
     const csvContent = file.buffer.toString('utf-8');
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
-
     // build json file
     const json = {
       "data": {
@@ -200,7 +199,7 @@ export class S3Controller {
       const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
       // Map metadata to DB fields
-      const lengthVal = typeof metadata?.run_time === 'number' ? Math.floor(metadata.run_time) : (metadata?.run_time ? Number(metadata.run_time) : 0);
+      const lengthVal = Math.max(...columns.map(col => col.length)) || 0;
 
       // Use the filename (last segment of the key) as the run title
       const title = (key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
