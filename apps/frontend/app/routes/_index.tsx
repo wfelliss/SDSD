@@ -167,7 +167,7 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
         <span className="text-sm">{run.title}</span>
       </div>
       <span className="text-sm font-light">
-        {run?.date && new Date(run.date).toLocaleDateString()}
+        {run?.date && new Date(run.date).toLocaleDateString("en-GB", {timeZone: 'UTC'})}
       </span>
     </button>
   );

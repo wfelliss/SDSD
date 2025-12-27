@@ -31,7 +31,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
-      if (!entries || entries.length === 0) return;
+      if (!entries || entries.length === 0 || !entries[0]) return;
       setWidth(entries[0].contentRect.width);
     });
     resizeObserver.observe(containerRef.current);
