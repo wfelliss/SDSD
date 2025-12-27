@@ -37,7 +37,7 @@ export const Histogram: React.FC<HistogramProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver(entries => {
-      if (!entries || entries.length === 0) return;
+      if (!entries || entries.length === 0 || !entries[0]) return;
       setWidth(entries[0].contentRect.width);
     });
     resizeObserver.observe(containerRef.current);
@@ -102,13 +102,15 @@ export const Histogram: React.FC<HistogramProps> = ({
         .attr("transform", `translate(0,${innerHeight})`)
         .transition().duration(500)
         .call(d3.axisBottom(x));
-    
+
     // Draw Y Axis
-    const yTickFormat = yMax < 10 ? d3.format("d") : d3.format("~s");
-    
     yAxisGroup
         .transition().duration(500)
-        .call(d3.axisLeft(y).ticks(5).tickFormat(yTickFormat));
+        .call(d3.axisLeft(y).ticks(5).tickFormat(d =>
+          yMax < 10
+            ? d3.format("d")(Number(d))
+            : d3.format("~s")(Number(d))
+        ));
 
     // Style Axes
     svg.selectAll(".domain").attr("class", "stroke-border");
@@ -131,21 +133,29 @@ export const Histogram: React.FC<HistogramProps> = ({
         (exit: any) => exit.transition().duration(500).attr("y", innerHeight).attr("height", 0).remove()
       )
       .attr("class", `bar-rect cursor-pointer transition-colors duration-200 ${colorClass}`)
-      .on("mouseenter", function(event: any, d: HistogramBin) {
-          d3.select(this).attr("class", `bar-rect cursor-pointer ${hoverColorClass}`);
-          
-          tooltip.style("opacity", 1)
-                .html(`
-                  <div class="font-bold text-gray-900">${d.percent}%</div>
-                `);
+      .on("mouseenter", function (
+        this: SVGRectElement,
+        event: MouseEvent,
+        d: HistogramBin
+      ) {
+        d3.select(this)
+          .attr("class", `bar-rect cursor-pointer ${hoverColorClass}`);
+
+        tooltip
+          .style("opacity", 1)
+          .html(`
+            <div class="font-bold text-gray-900">${d.percent}%</div>
+          `);
       })
       .on("mousemove", (event: any) => {
           const [xPos, yPos] = d3.pointer(event, containerRef.current);
           tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
       })
-      .on("mouseleave", function() {
-          d3.select(this).attr("class", `bar-rect cursor-pointer ${colorClass}`);
-          tooltip.style("opacity", 0);
+      .on("mouseleave", function (this: SVGRectElement) {
+        d3.select(this)
+          .attr("class", `bar-rect cursor-pointer ${colorClass}`);
+
+        tooltip.style("opacity", 0);
       })
       .transition().duration(750).ease(d3.easeCubicOut)
       .attr("x", (d: HistogramBin) => x(d.x0) + 1)
