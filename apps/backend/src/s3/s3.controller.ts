@@ -143,7 +143,6 @@ export class S3Controller {
     const csvContent = file.buffer.toString('utf-8');
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
-
     // build json file
     const json = {
       "data": {
@@ -200,10 +199,11 @@ export class S3Controller {
       const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
       // Map metadata to DB fields
-      const lengthVal = typeof metadata?.run_time === 'number' ? Math.floor(metadata.run_time) : (metadata?.run_time ? Number(metadata.run_time) : 0);
+      const lengthVal = Math.max(...columns.map(col => col.length)) || 0;
 
       // Use the filename (last segment of the key) as the run title
-      const title = key.split('/').pop() ?? key;
+      const title = (key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
+
 
       const runData = {
         srcPath: s3Url,
@@ -212,6 +212,8 @@ export class S3Controller {
         length: Number.isFinite(lengthVal) ? Math.floor(lengthVal) : 0,
         date: metadata?.date ? new Date(metadata.date) : undefined,
         location: metadata?.location ?? null,
+        front_freq: metadata?.front_freq ?? 100, // 100 is the default freq on esp
+        rear_freq: metadata?.rear_freq ?? 100,
       };
 
       console.log('💾 Creating database record with data:', JSON.stringify(runData, null, 2));
