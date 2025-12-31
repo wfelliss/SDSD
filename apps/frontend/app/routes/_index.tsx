@@ -142,6 +142,12 @@ interface SidebarMenuButtonProps {
 function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProps) {
   const isSelected = selected.some((r) => r.id === run.id);
 
+  const displayTitle = run.title
+    ? run.title.length > 14
+      ? `${run.title.slice(0, 14)}...`
+      : run.title
+    : "";
+
   const toggle = () => {
     if (isSelected) {
       setSelected(selected.filter((r) => r.id !== run.id));
@@ -164,7 +170,7 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
         >
           {isSelected && <CheckIcon className="size-full text-white" strokeWidth={4} />}
         </div>
-        <span className="text-sm">{run.title}</span>
+        <span className="text-sm">{displayTitle}</span>
       </div>
       <span className="text-sm font-light">
         {run?.date && new Date(run.date).toLocaleDateString("en-GB", {timeZone: 'UTC'})}
