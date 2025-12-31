@@ -8,7 +8,7 @@ export interface DataPoint {
 
 interface LinePlotProps {
   data: DataPoint[][];
-  sampleFrequency?: number;
+  xDomain?: [number, number];
   yDomain?: [number, number];
   height?: number;
   className?: string;
@@ -17,7 +17,7 @@ interface LinePlotProps {
 
 export const LinePlot: React.FC<LinePlotProps> = ({
   data,
-  sampleFrequency = 1000,
+  xDomain,
   yDomain = [0, 100],
   height = 400,
   className = "",
@@ -122,12 +122,17 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 
     svg.select("#clip rect").attr("width", innerWidth);
 
-    const maxPoints = data.reduce((mx, series) => Math.max(mx, series.length), 0);
-    const xMax = maxPoints / sampleFrequency;
+    // Determine X Domain
+    let finalXDomain = xDomain;
+    if (!finalXDomain) {
+      const allPoints = data.flat();
+      const xExtent = d3.extent(allPoints, (d) => d.x) as [number, number];
+      finalXDomain = xExtent[0] !== undefined ? xExtent : [0, 100];
+    }
     
-    x.range([0, innerWidth]).domain([0, xMax]);
+    x.range([0, innerWidth]).domain(finalXDomain);
     y.range([innerHeight, 0]).domain(yDomain);
-    x2.range([0, innerWidth]).domain([0, xMax]);
+    x2.range([0, innerWidth]).domain(finalXDomain);
     const y2 = d3.scaleLinear().range([innerHeight2, 0]).domain(yDomain);
 
     xAxisGroup!.call(d3.axisBottom(x));
@@ -163,7 +168,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     brushGroup.call(brush);
     brushGroup.selectAll(".selection").attr("class", "selection fill-muted-foreground/30 stroke-border");
 
-  }, [data, width, height, yDomain]);
+  }, [data, width, height, yDomain, xDomain]);
 
   return (
     <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>
