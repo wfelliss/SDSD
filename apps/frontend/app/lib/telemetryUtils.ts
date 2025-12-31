@@ -67,7 +67,7 @@ export function calculateMovingAverage(
   data: NormalizedPoint[], 
   freq: number, 
 ): NormalizedPoint[] {
-  
+
   const windowSize = Math.max(1, Math.floor((WINDOWMS / 1000) * freq));
   if (data.length < windowSize) return [];
 
@@ -77,22 +77,26 @@ export function calculateMovingAverage(
   // Initial sum
   let currentSum = 0;
   for (let i = 0; i < windowSize; i++) {
-    currentSum += data[i].y;
+    const pt = data[i]!;
+    currentSum += pt.y;
   }
 
   // First centered point
   result.push({
-    x: data[windowSize - 1].x - halfWindowX,
+    x: data[windowSize - 1]!.x - halfWindowX,
     y: currentSum / windowSize
   });
 
   // Sliding window
   for (let i = windowSize; i < data.length; i++) {
-    currentSum -= data[i - windowSize].y;
-    currentSum += data[i].y;
+    const outPt = data[i - windowSize]!;
+    const inPt = data[i]!;
+
+    currentSum -= outPt.y;
+    currentSum += inPt.y;
 
     result.push({
-      x: data[i].x - halfWindowX,
+      x: inPt.x - halfWindowX,
       y: currentSum / windowSize
     });
   }

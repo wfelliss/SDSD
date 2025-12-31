@@ -31,7 +31,7 @@ function getSeriesConfig(
 
 // ---------------------- Displacement Plot ----------------------
 export function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSectionProps) {
-  if (!selected || selected.length === 0) {
+  if (!selected || selected.length === 0 || !selected[0]) {
     return <SectionHeader>No run selected</SectionHeader>;
   }
 
