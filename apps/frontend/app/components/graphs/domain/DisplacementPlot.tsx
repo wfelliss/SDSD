@@ -58,8 +58,6 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
     return <div className="p-4 text-gray-400 italic">No data available for {title}</div>;
   }
 
-  const masterFreq = series[0]?.freq
-
   return (
     <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
       <div className="flex items-center justify-between mb-4">
@@ -78,7 +76,6 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
       <div className="w-full overflow-hidden">
         <LinePlot // use base LinePlot component
           data={chartData}
-          sampleFrequency={masterFreq}
           yDomain={[0, 100]}
 
           height={height}

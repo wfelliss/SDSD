@@ -9,7 +9,7 @@ import type { LinksFunction, MetaFunction } from "@remix-run/node";
 
 import stylesheet from "./tailwind.css?url";
 
-export const meta: MetaFunction = () => [{ title: "SD^2 Telemetry" }];
+export const meta: MetaFunction = () => [{ title: "SD² Telemetry" }];
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
