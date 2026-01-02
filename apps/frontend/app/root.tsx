@@ -1,15 +1,18 @@
 import {
   Links,
+  LinksFunction,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+} from "react-router";
 
 import stylesheet from "./tailwind.css?url";
+import { Providers } from "./lib/providers";
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesheet }];
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: stylesheet },
+];
 
 export default function App() {
   return (
@@ -20,8 +23,10 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <Outlet />
+      <body className="min-h-screen bg-page-background-primary font-sans antialiased">
+        <Providers>
+          <Outlet />
+        </Providers>
         <ScrollRestoration />
         <Scripts />
       </body>

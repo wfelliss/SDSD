@@ -1,5 +1,4 @@
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "react-router";
 import { cn } from "app/lib/utils";
 import { CheckIcon } from "lucide-react";
 import { useState, useEffect } from "react";
