@@ -5,6 +5,8 @@ import { CheckIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DisplacementPlot } from "../components/graphs/domain/DisplacementPlot";
 import { TravelHistogram } from "../components/graphs/domain/TravelHistogram";
+import { requireUser } from "../helpers/session";
+
 
 // ---------- Types ----------
 type RunItem = {
@@ -19,11 +21,16 @@ type RunItem = {
 type RunJson = Record<string, any>;
 
 // ---------- Loader ----------
-export const loader = async () => {
+export const loader = async ({request}: {request:Request}) => {
+  const user = await requireUser(request); // redirects automatically if not logged in
+  const cookieHeader = request.headers.get("cookie") ?? "";
   const backendURL =
     process.env.BACKEND_URL || "http://localhost:3001/api/runs/";
 
-  const res = await fetch(backendURL);
+  const res = await fetch(backendURL,{
+    headers: { cookie: request.headers.get("cookie") ?? "" },
+    credentials: "include",
+  });
   if (!res.ok) {
     throw new Response("Failed to fetch runs", { status: res.status });
   }
