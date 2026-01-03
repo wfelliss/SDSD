@@ -20,12 +20,18 @@ function getSeriesConfig(
   const isError = !data || data.error;
   const rawData = isError ? [] : (type === 'front' ? data.data.suspension.front_sus : data.data.suspension.rear_sus);
   const freq = isError ? 100 : (type === 'front' ? (run.front_freq || 100) : (run.rear_freq || 100));
+  // Attempt to read profile ranges if the backend included the profile relation
+  const profile = (run as any).profile ?? (run as any).profile_id ?? null;
+  const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
+  const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
 
   return {
     label: customLabel || run.title || `Run ${run.id}`,
     color: index === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
     rawData,
-    freq
+    freq,
+    min,
+    max
   };
 }
 
@@ -91,6 +97,9 @@ export function HistogramSection({ selected, jsonData, isCompareMode }: ChartSec
 
     // Data
     const rawData = type === 'front' ? data.data.suspension.front_sus : data.data.suspension.rear_sus;
+    const profile = (run as any).profile ?? null;
+    const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
+    const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
     
     // Color
     const isChart2 = isCompareMode ? index === 1 : type === 'rear';
@@ -101,6 +110,8 @@ export function HistogramSection({ selected, jsonData, isCompareMode }: ChartSec
         key={`${type}-${run.id}`}
         title={isCompareMode ? `${type === 'front' ? 'Front' : 'Rear'}: ${run.title}` : `${type === 'front' ? 'Front' : 'Rear'} Travel`}
         rawData={rawData}
+        min={min}
+        max={max}
         colorClass={`fill-${colorVar}`}
         hoverColorClass={`fill-${colorVar}-hover`}
       />

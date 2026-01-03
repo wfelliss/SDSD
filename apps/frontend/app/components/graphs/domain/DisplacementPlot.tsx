@@ -8,6 +8,8 @@ export interface SeriesConfig {
   color: string;
   rawData: RawSuspensionData[];
   freq: number;
+  min?: number;
+  max?: number;
 }
 
 interface DisplacementPlotProps {
@@ -36,12 +38,12 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
     const output: any[] = [];
 
     if (dynamicSag.front && series[0]) {
-      const clean = processLinePlotData(dynamicSag.front, series[0].freq);
+      const clean = processLinePlotData(dynamicSag.front, series[0].freq, series[0].min, series[0].max);
       output.push(calculateMovingAverage(clean, series[0].freq));
     }
 
     if (dynamicSag.rear && series[1]) {
-      const clean = processLinePlotData(dynamicSag.rear, series[1].freq);
+      const clean = processLinePlotData(dynamicSag.rear, series[1].freq, series[1].min, series[1].max);
       output.push(calculateMovingAverage(clean, series[1].freq));
     }
 
@@ -50,7 +52,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
 
   // chart data calculation
   const chartData = useMemo(() => {
-    const mainLines = series.map(s => processLinePlotData(s.rawData, s.freq));
+    const mainLines = series.map(s => processLinePlotData(s.rawData, s.freq, s.min, s.max));
     return [...mainLines, ...sagLines];
   }, [series, sagLines]);
 
