@@ -4,15 +4,21 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "../components/runs/sidebar";
 import { MainContent } from "app/components/runs/main-content";
 import { RunItem, RunJson } from "app/types/runs";
+import { requireUser } from "../helpers/session";
 
 
 // ---------- Loader ----------
-export const loader = async () => {
+export const loader = async ({request}: {request:Request}) => {
+  const user = await requireUser(request); // redirects automatically if not logged in
+  const cookieHeader = request.headers.get("cookie") ?? "";
   const backendURL =
     // Use Vite env var exposed to the client build. Fallback to localhost for dev.
     (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:3001/api/runs/";
 
-  const res = await fetch(backendURL);
+  const res = await fetch(backendURL,{
+    headers: { cookie: request.headers.get("cookie") ?? "" },
+    credentials: "include",
+  });
   if (!res.ok) {
     throw new Response("Failed to fetch runs", { status: res.status });
   }

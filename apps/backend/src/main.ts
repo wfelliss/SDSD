@@ -1,5 +1,8 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
+import cookieParser from "cookie-parser";
+
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,9 +19,11 @@ async function bootstrap() {
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
     credentials: true,
   });
+// set up cookies for remembering login
 
   // Set global prefix for all routes
   app.setGlobalPrefix("api");
+  app.use(cookieParser())
 
   // 2. Bind to 0.0.0.0 for Railway compatibility
   const port = process.env.PORT || 3001;
