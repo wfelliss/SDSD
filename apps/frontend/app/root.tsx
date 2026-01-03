@@ -1,6 +1,7 @@
 import {
   Links,
   LinksFunction,
+  MetaFunction,
   Meta,
   Outlet,
   Scripts,
@@ -10,7 +11,12 @@ import {
 import stylesheet from "./tailwind.css?url";
 import { Providers } from "./lib/providers";
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesheet }];
+export const meta: MetaFunction = () => [{ title: "SD² Telemetry" }];
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: stylesheet },
+  { rel: "icon", href: "/logo.png" },
+];
 
 export default function App() {
   return (
