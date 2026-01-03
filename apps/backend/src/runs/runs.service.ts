@@ -39,7 +39,9 @@ export class RunsService {
     date?: Date;
     location?: string;
     profile?: number;
-  }) {
+    front_freq?: number;
+    rear_freq?: number;
+    }) {
     // enforce uniqueness at service level to avoid duplicate runs
     const existing = await this.findBySrcPath(data.srcPath);
     if (existing) {

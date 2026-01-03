@@ -10,9 +10,7 @@ import {
 import stylesheet from "./tailwind.css?url";
 import { Providers } from "./lib/providers";
 
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: stylesheet },
-];
+export const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesheet }];
 
 export default function App() {
   return (

@@ -8,6 +8,7 @@ export interface DataPoint {
 
 interface LinePlotProps {
   data: DataPoint[][];
+  xDomain?: [number, number];
   yDomain?: [number, number];
   height?: number;
   className?: string;
@@ -16,6 +17,7 @@ interface LinePlotProps {
 
 export const LinePlot: React.FC<LinePlotProps> = ({
   data,
+  xDomain,
   yDomain = [0, 100],
   height = 400,
   className = "",
@@ -29,7 +31,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
-      if (!entries || entries.length === 0) return;
+      if (!entries || entries.length === 0 || !entries[0]) return;
       setWidth(entries[0].contentRect.width);
     });
     resizeObserver.observe(containerRef.current);
@@ -94,9 +96,6 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         .attr("class", "axis axis--x text-muted-foreground text-xs")
         .attr("transform", `translate(0,${innerHeight})`);
       const yAxisGroup = focus.append("g").attr("class", "axis axis--y text-muted-foreground text-xs");
-      const xAxis2Group = context.append("g")
-        .attr("class", "axis axis--x text-muted-foreground text-xs")
-        .attr("transform", `translate(0,${innerHeight2})`);
 
       const brush = d3.brushX()
         .extent([[0, 0], [innerWidth, innerHeight2]])
@@ -113,28 +112,31 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         context, 
         xAxisGroup, 
         yAxisGroup, 
-        xAxis2Group,
         brush,       
         brushGroup   
       };
     }
 
     // Updates
-    const { x, y, x2, focus, context, xAxisGroup, yAxisGroup, xAxis2Group, brush, brushGroup } = contextRef.current;
+    const { x, y, x2, focus, context, xAxisGroup, yAxisGroup, brush, brushGroup } = contextRef.current;
 
     svg.select("#clip rect").attr("width", innerWidth);
 
-    const allPoints = data.flat();
-    const xMax = d3.max(allPoints, (d) => d.x) || 0;
+    // Determine X Domain
+    let finalXDomain = xDomain;
+    if (!finalXDomain) {
+      const allPoints = data.flat();
+      const xExtent = d3.extent(allPoints, (d) => d.x) as [number, number];
+      finalXDomain = xExtent[0] !== undefined ? xExtent : [0, 100];
+    }
     
-    x.range([0, innerWidth]).domain([0, xMax]);
+    x.range([0, innerWidth]).domain(finalXDomain);
     y.range([innerHeight, 0]).domain(yDomain);
-    x2.range([0, innerWidth]).domain([0, xMax]);
+    x2.range([0, innerWidth]).domain(finalXDomain);
     const y2 = d3.scaleLinear().range([innerHeight2, 0]).domain(yDomain);
 
     xAxisGroup!.call(d3.axisBottom(x));
     yAxisGroup!.call(d3.axisLeft(y).ticks(5));
-    xAxis2Group!.call(d3.axisBottom(x2));
 
     const lineGenerator = d3.line<DataPoint>().x((d) => x(d.x)).y((d) => y(d.y));
     const lineGenerator2 = d3.line<DataPoint>().x((d) => x2(d.x)).y((d) => y2(d.y));
@@ -166,7 +168,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     brushGroup.call(brush);
     brushGroup.selectAll(".selection").attr("class", "selection fill-muted-foreground/30 stroke-border");
 
-  }, [data, width, height, yDomain]);
+  }, [data, width, height, yDomain, xDomain]);
 
   return (
     <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>
