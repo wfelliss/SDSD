@@ -161,7 +161,7 @@ export class S3Controller {
     // Convert new csv into json format
     const csvContent = file.buffer.toString('utf-8');
     const [frontStart, rearStart] = this.getStartingValues(csvContent);
-    const front_max = this.findMax(frontStart, metadata?.front_stroke, 220);
+    const front_max = this.findMax(frontStart, metadata?.front_stroke, 230);
     const back_max = this.findMax(rearStart, metadata?.rear_stroke, 80);
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
