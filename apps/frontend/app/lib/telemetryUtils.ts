@@ -12,8 +12,18 @@ export interface NormalizedPoint {
   y: number; 
 }
 
-export function normalizeToPercentage(val: number): number {
-  return 100 - (val / MAX_TRAVEL) * 100;
+export function normalizeToPercentage(val: number, min?: number, max?: number): number {
+  // If caller provides a valid min/max range, use it; otherwise fall back to 0..MAX_TRAVEL
+  const hasValidRange = typeof min === 'number' && typeof max === 'number' && isFinite(min) && isFinite(max) && max > min;
+
+  if (!hasValidRange) {
+    const result = 100 - (val / MAX_TRAVEL) * 100;
+    return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
+  }
+
+  const pct = (val - (min as number)) / ((max as number) - (min as number));
+  const result = 100 - pct * 100;
+  return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
 }
 
 export function standardizeData(dataArr: RawSuspensionData[], freq: number): StandardizedPoint[] {
@@ -38,17 +48,17 @@ export function standardizeData(dataArr: RawSuspensionData[], freq: number): Sta
 
 
 // DisplacementPlot - Standardizes raw suspension data and maps it into normalized time-series points.
-export function processLinePlotData(dataArr: RawSuspensionData[], freq: number): NormalizedPoint[] {
+export function processLinePlotData(dataArr: RawSuspensionData[], freq: number, min?: number, max?: number): NormalizedPoint[] {
   const cleanData = standardizeData(dataArr, freq);
-  
+
   return cleanData.map(point => ({
     x: point.time,
-    y: normalizeToPercentage(point.val)
+    y: normalizeToPercentage(point.val, min, max)
   }));
 }
 
 // TravelHistogram - Normalise displacement values for histogram distribution
-export const processHistogramData = (dataArr: RawSuspensionData[]): number[] => {
+export const processHistogramData = (dataArr: RawSuspensionData[], min?: number, max?: number): number[] => {
   if (!Array.isArray(dataArr)) return [];
 
   return dataArr.map(p => {
@@ -58,7 +68,7 @@ export const processHistogramData = (dataArr: RawSuspensionData[]): number[] => 
     } else {
       val = Number(p.displacement ?? 0);
     }
-    return normalizeToPercentage(val);
+    return normalizeToPercentage(val, min, max);
   }).filter(v => !isNaN(v) && isFinite(v));
 };
 

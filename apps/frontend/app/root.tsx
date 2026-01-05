@@ -1,13 +1,15 @@
 import {
   Links,
+  LinksFunction,
+  MetaFunction,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "@remix-run/react";
-import type { LinksFunction, MetaFunction } from "@remix-run/node";
+} from "react-router";
 
 import stylesheet from "./tailwind.css?url";
+import { Providers } from "./lib/providers";
 
 export const meta: MetaFunction = () => [{ title: "SD² Telemetry" }];
 
@@ -25,8 +27,10 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <Outlet />
+      <body className="min-h-screen bg-page-background-primary font-sans antialiased">
+        <Providers>
+          <Outlet />
+        </Providers>
         <ScrollRestoration />
         <Scripts />
       </body>

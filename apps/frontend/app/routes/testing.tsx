@@ -1,5 +1,5 @@
-import { type MetaFunction } from "@remix-run/node";
 import { useState } from "react";
+import { MetaFunction } from "react-router";
 
 export const meta: MetaFunction = () => {
   return [

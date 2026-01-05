@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Post, Res, Body, BadRequestException, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Response } from 'express';
 import { S3Service } from './s3.service';
+import { ProfilesService } from '../profiles/profiles.service';
 import { RunsService } from '../runs/runs.service';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -12,6 +13,7 @@ export class S3Controller {
     private readonly s3Service: S3Service,
     private readonly runsService: RunsService,
     private readonly configService: ConfigService,
+    private readonly profilesService: ProfilesService,
   ) {}
 
   @Get('list')
@@ -115,6 +117,23 @@ export class S3Controller {
     return columns;
   }
 
+  private getStartingValues(csv: string): [number, number] {
+    const rows = csv.trim().split('\n').map(r => r.split(','));
+    if (rows.length < 2) return [0, 0];
+    const frontStart = parseInt(rows[1][6], 10);
+    const rearStart = parseInt(rows[1][7], 10);
+    return [frontStart, rearStart];
+  }
+  private findMax(startValue, suspensionStroke, potentiometerStroke): number {
+    const adcPerMm = 4096 / potentiometerStroke;
+
+    // Calculate expected end value
+    const endValue = startValue + suspensionStroke * adcPerMm;
+
+    // Clamp to valid ADC range
+    return Math.min(4096, Math.max(0, Math.round(endValue)));
+  }
+  
   /**
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
@@ -141,6 +160,9 @@ export class S3Controller {
     }
     // Convert new csv into json format
     const csvContent = file.buffer.toString('utf-8');
+    const [frontStart, rearStart] = this.getStartingValues(csvContent);
+    const front_max = this.findMax(frontStart, metadata?.front_stroke, 220);
+    const back_max = this.findMax(rearStart, metadata?.rear_stroke, 80);
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
     // build json file
@@ -204,6 +226,16 @@ export class S3Controller {
       // Use the filename (last segment of the key) as the run title
       const title = (key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
 
+      const profileData = {
+        name: title+"_profile",
+        front_min: frontStart,
+        back_min: rearStart,
+        front_max: front_max,
+        back_max: back_max,
+      }
+
+      let profile = await this.profilesService.create(profileData);
+      console.log('💾 Created profile record:', profile);
 
       const runData = {
         srcPath: s3Url,
@@ -214,6 +246,7 @@ export class S3Controller {
         location: metadata?.location ?? null,
         front_freq: metadata?.front_freq ?? 100, // 100 is the default freq on esp
         rear_freq: metadata?.rear_freq ?? 100,
+        profile: profile.id
       };
 
       console.log('💾 Creating database record with data:', JSON.stringify(runData, null, 2));

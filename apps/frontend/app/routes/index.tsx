@@ -1,5 +1,6 @@
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { cn } from "app/lib/utils";
+import { CheckIcon } from "lucide-react";
+import { useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
 import { Sidebar } from "../components/runs/sidebar";
 import { MainContent } from "app/components/runs/main-content";
@@ -18,7 +19,7 @@ export const loader = async () => {
   }
 
   const runs: RunItem[] = await res.json();
-  return json({ runs });
+  return { runs };
 };
 
 // ---------------------- MAIN PAGE COMPONENT ----------------------

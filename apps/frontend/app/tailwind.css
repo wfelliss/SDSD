@@ -20,19 +20,33 @@
   }
 }
 
+@theme {
+  --color-page-background-primary: var(--color-zinc-200);
+  --color-card-background-primary: var(--color-zinc-50);
+  --color-card-background-secondary: var(--color-zinc-200);
+
+  --color-text-primary: var(--color-zinc-900);
+  --color-text-secondary: var(--color-zinc-700);
+  --color-text-tertiary: var(--color-zinc-600);
+}
+
 @layer components {
   .line-path {
     @apply fill-none stroke-[2px] transition-colors duration-300;
   }
-  
-  .line-primary { stroke: hsl(var(--chart-1)); }
-  .line-secondary { stroke: hsl(var(--chart-2)); }
-  
+
+  .line-primary {
+    stroke: hsl(var(--chart-1));
+  }
+  .line-secondary {
+    stroke: hsl(var(--chart-2));
+  }
+
   .line-context {
     @apply fill-none stroke-[1px] opacity-60;
   }
-  
-  .line-lowemphasis { 
+
+  .line-lowemphasis {
     stroke: hsl(var(--foreground));
     opacity: 0.35;
     stroke-width: 3px;
@@ -42,10 +56,18 @@
     @apply transition-colors duration-200;
   }
 
-  .fill-chart-1       { fill: hsl(var(--chart-1)); }
-  .fill-chart-1-hover { fill: hsl(var(--chart-1-hover)); }
-  .fill-chart-2       { fill: hsl(var(--chart-2)); }
-  .fill-chart-2-hover { fill: hsl(var(--chart-2-hover)); }
+  .fill-chart-1 {
+    fill: hsl(var(--chart-1));
+  }
+  .fill-chart-1-hover {
+    fill: hsl(var(--chart-1-hover));
+  }
+  .fill-chart-2 {
+    fill: hsl(var(--chart-2));
+  }
+  .fill-chart-2-hover {
+    fill: hsl(var(--chart-2-hover));
+  }
 
   .brush .selection {
     fill: hsl(var(--muted-foreground) / 0.2);
