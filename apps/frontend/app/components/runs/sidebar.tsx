@@ -18,7 +18,7 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
       </div>
       <ul className="flex flex-col">
         {runs.length === 0 ? (
-          <li className="text-slate-500 text-sm">No runs available - go ride your bike</li>
+          <li className="text-slate-500 text-sm border-orange-400 border-l-2 bg-orange-400/10 px-2 py-1 rounded-xs">No runs available - go ride your bike</li>
         ) : (
           runs.map((run) => (
             <SidebarMenuButton

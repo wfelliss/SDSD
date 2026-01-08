@@ -7,7 +7,7 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev --port 3000",
-    "start": "react-router serve ./build/server/index.js",
+    "start": "react-router-serve ./build/server/index.js",
     "lint": "eslint --max-warnings 0",
     "check-types": "tsc --noEmit"
   },
@@ -17,6 +17,7 @@
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.16",
+    "@react-router/serve": "7.12.0",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
