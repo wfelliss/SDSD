@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { runs, users } from "./src/database/schema";
+import { profiles, runs, users } from "./src/database/schema";
 
 async function seed() {
   const connectionString =
@@ -10,6 +10,31 @@ async function seed() {
   const db = drizzle(client);
 
   console.log("🌱 Seeding database...");
+
+  const initialProfiles = [
+    {id: 1,
+      name: "Default Profile",
+      front_min: 500,
+      front_max: 900,
+      back_min: 500,
+      back_max: 900
+    },
+  ];
+
+  for (const profileItem of initialProfiles) {
+    await db.insert(profiles)
+      .values({
+        id: profileItem.id,
+        name: profileItem.name,
+        front_min: profileItem.front_min,
+        front_max: profileItem.front_max,
+        back_min: profileItem.back_min,
+        back_max: profileItem.back_max
+      })
+      .onConflictDoNothing(); // ← ignores duplicates automatically
+
+    console.log(`✅ Processed profile: ${profileItem.name}`);
+  }
 
   // Insert some test users
   const initialRuns = [
@@ -21,6 +46,7 @@ async function seed() {
         "length": 2184,
         "date": "2025-11-13T18:53:58.985Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:53:59.018Z"
@@ -33,6 +59,7 @@ async function seed() {
         "length": 58727,
         "date": "2025-11-13T18:54:23.706Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:54:23.707Z"
@@ -45,6 +72,7 @@ async function seed() {
         "length": 5556,
         "date": "2025-11-13T18:54:46.319Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:54:46.290Z"
@@ -57,6 +85,7 @@ async function seed() {
         "length": 58167,
         "date": "2025-11-13T18:55:07.660Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:55:07.626Z"
@@ -69,6 +98,7 @@ async function seed() {
         "length": 57722,
         "date": "2025-11-13T18:55:35.659Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:55:35.635Z"
@@ -81,6 +111,7 @@ async function seed() {
         "length": 54606,
         "date": "2025-11-13T18:56:12.004Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:56:11.960Z"
@@ -93,6 +124,7 @@ async function seed() {
         "length": 63191,
         "date": "2025-11-13T18:56:34.814Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:56:34.801Z"
@@ -105,6 +137,7 @@ async function seed() {
         "length": 55112,
         "date": "2025-11-13T18:56:54.752Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:56:54.773Z"
@@ -117,6 +150,7 @@ async function seed() {
         "length": 56679,
         "date": "2025-11-13T18:57:12.942Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:57:12.899Z"
@@ -129,6 +163,7 @@ async function seed() {
         "length": 16864,
         "date": "2025-11-13T18:57:27.966Z",
         "location": null,
+        "profile": 1,
         "front_freq": 250,
         "rear_freq": 250,
         "createdAt": "2025-11-13T18:57:27.984Z"
@@ -144,12 +179,25 @@ async function seed() {
         length: Number.isFinite(runItem.length) ? runItem.length : 0,
         date: runItem.date ? new Date(runItem.date) : new Date(),
         location: runItem.location ?? null,
+        profile: runItem.profile ?? null,
         front_freq: runItem.front_freq ?? 250,
         rear_freq: runItem.rear_freq ?? 250,
         createdAt: runItem.createdAt ? new Date(runItem.createdAt) : new Date(),
       })
-      .onConflictDoNothing(); // ← ignores duplicates automatically
-
+      .onConflictDoUpdate({
+        target: runs.srcPath, // <-- column(s) that have the unique constraint
+        set: {
+          title: runItem.title ?? null,
+          comments: runItem.comments ?? null,
+          length: Number.isFinite(runItem.length) ? runItem.length : 0,
+          date: runItem.date ? new Date(runItem.date) : new Date(),
+          location: runItem.location ?? null,
+          profile: runItem.profile ?? null,
+          front_freq: runItem.front_freq ?? 250,
+          rear_freq: runItem.rear_freq ?? 250,
+          createdAt: runItem.createdAt ? new Date(runItem.createdAt) : new Date(),
+        },
+      });
     console.log(`✅ Processed run: ${runItem.title}`);
   }
 
