@@ -15,7 +15,7 @@ export const loader = async () => {
 
   const res = await fetch(backendURL);
   if (!res.ok) {
-    throw new Response("Failed to fetch runs", { status: res.status });
+    return { runs: [] };
   }
 
   const runs: RunItem[] = await res.json();
