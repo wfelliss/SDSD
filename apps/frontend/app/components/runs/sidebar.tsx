@@ -17,13 +17,17 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
         <h2 className="text-sm text-slate-500">You can compare up to 2 runs</h2>
       </div>
       <ul className="flex flex-col">
-        {runs.map((run) => (
-          <SidebarMenuButton
-            key={run.id}
-            run={run}
-            selected={selected}
-            setSelected={setSelected}
-          />
+        {runs.length === 0 ? (
+          <li className="text-slate-500 text-sm">No runs available - go ride your bike</li>
+        ) : (
+          runs.map((run) => (
+            <SidebarMenuButton
+              key={run.id}
+              run={run}
+              selected={selected}
+              setSelected={setSelected}
+            />
+          )
         ))}
       </ul>
     </div>
