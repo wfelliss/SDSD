@@ -2,5 +2,5 @@ import axios from "axios";
 
 
 export const apiClient = axios.create({
-  baseURL: "/api"
+  baseURL: (import.meta.env.API_BASE_URL || "http://localhost:3001") + "/api",
 })
