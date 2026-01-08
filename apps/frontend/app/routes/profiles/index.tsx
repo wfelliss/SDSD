@@ -17,6 +17,7 @@ import { cn, formatDate } from "app/lib/utils";
 import { useState } from "react";
 import { Transition } from "@headlessui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { getProfiles } from "app/api/profiles";
 
 export const meta: MetaFunction = () => {
   return [
@@ -27,9 +28,7 @@ export const meta: MetaFunction = () => {
 
 export const loader = async () => {
   try {
-    const profiles = await axios.get<Profile[]>(
-      "http://localhost:3001/api/profiles"
-    );
+    const profiles = await getProfiles();
     return { profiles: profiles.data, error: null };
   } catch (error) {
     return { profiles: [], error: "Failed to load profiles." };
