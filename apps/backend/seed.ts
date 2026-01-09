@@ -12,19 +12,17 @@ async function seed() {
   console.log("🌱 Seeding database...");
 
   const initialProfiles = [
-    {id: 1,
-      name: "Default Profile",
-      front_min: 500,
-      front_max: 900,
-      back_min: 500,
-      back_max: 900
+    { "name": "Default Profile",
+      "front_min": 500,
+      "front_max": 900,
+      "back_min": 500,
+      "back_max": 900
     },
   ];
 
   for (const profileItem of initialProfiles) {
     await db.insert(profiles)
       .values({
-        id: profileItem.id,
         name: profileItem.name,
         front_min: profileItem.front_min,
         front_max: profileItem.front_max,
@@ -39,7 +37,6 @@ async function seed() {
   // Insert some test users
   const initialRuns = [
       {
-        "id": 7,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN1-2",
         "title": "RUN1-2",
         "comments": "Checking system was turning on and off correctly, only measuring shock",
@@ -52,7 +49,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:53:59.018Z"
     },
     {
-        "id": 8,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN2",
         "title": "RUN2",
         "comments": "Normal settings, petentiometer came out half way down, only measuring shock",
@@ -65,7 +61,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:54:23.707Z"
     },
     {
-        "id": 9,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN3",
         "title": "RUN3",
         "comments": "Not on the bike, values can be used to set 0% travel, only measuring shock",
@@ -78,7 +73,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:54:46.290Z"
     },
     {
-        "id": 10,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN4",
         "title": "RUN4",
         "comments": "Normal settings full run, only measuring shock",
@@ -91,7 +85,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:55:07.626Z"
     },
     {
-        "id": 11,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN5",
         "title": "RUN5",
         "comments": "LSC fully firm, petentiometer fell out 3/4 way down, only measuring shock",
@@ -104,7 +97,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:55:35.635Z"
     },
     {
-        "id": 12,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN6",
         "title": "RUN6",
         "comments": "LSC fully firm, full run, only measuring shock",
@@ -117,7 +109,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:56:11.960Z"
     },
     {
-        "id": 13,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN7",
         "title": "RUN7",
         "comments": "HSC fully firm, got puncture instantly, only measuring shock",
@@ -130,7 +121,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:56:34.801Z"
     },
     {
-        "id": 14,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN8",
         "title": "RUN8",
         "comments": "HSC fully firm, full run, only measuring shock",
@@ -143,7 +133,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:56:54.773Z"
     },
     {
-        "id": 15,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN9",
         "title": "RUN9",
         "comments": "HSC fully firm, full run, only measuring shock",
@@ -156,7 +145,6 @@ async function seed() {
         "createdAt": "2025-11-13T18:57:12.899Z"
     },
     {
-        "id": 16,
         "srcPath": "https://sd-squared.s3.eu-west-2.amazonaws.com/run_data/2025-11-13/RUN10",
         "title": "RUN10",
         "comments": "Test Uploaded file",
