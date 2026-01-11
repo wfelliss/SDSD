@@ -1,3 +1,5 @@
+import { Profile } from "app/api/profiles";
+
 export type RunItem = {
   id: number;
   title: string | null;
@@ -7,6 +9,7 @@ export type RunItem = {
   front_freq?: number;
   rear_freq?: number;
   length?: number;
+  profile? : Profile
 };
 
 export type RunJson = Record<string, any>;

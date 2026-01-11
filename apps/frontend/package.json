@@ -14,10 +14,10 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@react-router/node": "^7.0.1",
+    "@react-router/serve": "7.12.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.16",
-    "@react-router/serve": "7.12.0",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
@@ -28,6 +28,7 @@
     "react-dom": "^19.2.0",
     "react-router": "^7.0.1",
     "react-router-dom": "^7.0.1",
+    "reactjs-popup": "^2.0.6",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
