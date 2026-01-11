@@ -3,8 +3,7 @@ import { DisplacementSection, HistogramSection } from "app/components/runs/chart
 import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-elements"; 
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopup";
-import { Profile } from "../profiles/profileRow";
-
+import { UserIcon } from "lucide-react";
 interface MainContentProps {
   selected: RunItem[];
   jsonData: Record<number, RunJson>;
@@ -81,11 +80,11 @@ export function MainContent({
                 selected={selected}
               />
             )}
-            <div className="mb-8 flex-row" >
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            <div className="w-full flex justify-between mb-8" >
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
                 {isCompareMode ? "Run Comparison" : selected[0]?.title || "Run Details"}
               </h1>
-              <button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" onClick={() => setIsPopupOpen(true)}>Profile</button>
+              <button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" onClick={() => setIsPopupOpen(true)}><UserIcon className="size-5" /></button>
             </div>
 
             <DisplacementSection
