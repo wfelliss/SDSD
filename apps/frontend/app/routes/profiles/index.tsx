@@ -1,6 +1,7 @@
 import type { MetaFunction } from "react-router";
 import { useLoaderData } from "react-router";
-import axios from "axios";
+import { apiClient} from "app/api/client";
+
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -77,9 +78,9 @@ async function partialUpdateProfile(
   profileId: number,
   partialProfile: Partial<Omit<Profile, "id" | "createdAt" | "updatedAt">>
 ) {
-  return await axios.patch(`/api/profiles/${profileId}`, partialProfile);
+  return await apiClient.patch(`/profiles/${profileId}`, partialProfile);
 }
-
+``
 function ProfileRow({ profile: initialProfile }: ProfileRowProps) {
   const [editing, setEditing] = useState(false);
   const [hovering, setHovering] = useState(false);
