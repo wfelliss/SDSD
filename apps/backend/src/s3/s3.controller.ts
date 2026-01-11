@@ -224,7 +224,7 @@ export class S3Controller {
       const lengthVal = Math.max(...columns.map(col => col.length)) || 0;
 
       // Use the filename (last segment of the key) as the run title
-      const title = (key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
+      const title = decodeURIComponent(key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
 
       const profileData = {
         name: title+"_profile",
