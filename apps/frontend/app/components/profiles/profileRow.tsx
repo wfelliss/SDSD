@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "app/api/client";
 
 
-interface Profile {
+export interface Profile {
   id: number;
   name: string;
   front_min: number;
@@ -20,9 +20,10 @@ interface Profile {
 
 interface ProfileRowProps {
   profile: Profile;
+  onProfileChange?: (profile: Profile) => void;
 }
 
-export function ProfileRow({ profile: initialProfile }: ProfileRowProps) {
+export function ProfileRow({ profile: initialProfile, onProfileChange }: ProfileRowProps) {
   const [editing, setEditing] = useState(false);
   const [hovering, setHovering] = useState(false);
 
@@ -125,7 +126,11 @@ export function ProfileRow({ profile: initialProfile }: ProfileRowProps) {
                 onClick={() => {
                   const { id, createdAt, updatedAt, ...editableFields } =
                     profile;
-                  updateProfile(editableFields).then(() => setEditing(false));
+                  updateProfile(editableFields).then(() => {
+                    setEditing(false)
+                    if (!onProfileChange) return
+                    onProfileChange(profile)
+                  });
                 }}
                 disabled={isPending}
                 className={cn(

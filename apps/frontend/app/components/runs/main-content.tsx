@@ -2,7 +2,8 @@ import { RunItem, RunJson } from "app/types/runs";
 import { DisplacementSection, HistogramSection } from "app/components/runs/chart-sections";
 import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-elements"; 
 import { useState } from "react";
-import { ProfileRow } from "../profiles/profileRow";
+import { ProfilePopup } from "../profiles/profilePopup";
+import { Profile } from "../profiles/profileRow";
 
 interface MainContentProps {
   selected: RunItem[];
@@ -26,6 +27,7 @@ export function MainContent({
   }
 
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [profileTick, setProfileTick] = useState(0);
 
   // Collect any fetch errors for the currently selected runs.
   const fetchErrors = selected
@@ -70,24 +72,14 @@ export function MainContent({
         {fetchErrors.length === 0 && (
           <>
             {isPopupOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div
-                  className="absolute inset-0 bg-black/50"
-                  onClick={() => setIsPopupOpen(false)}
-                />
-                <div className="relative z-10 w-full max-w-lg rounded bg-white p-6">
-                  <h2 className="mb-2 text-lg font-semibold">Profile</h2>
-                  {selected[0]?.profile && <ProfileRow profile={selected[0]?.profile} />}
-                  <div className="mt-4 text-right">
-                    <button
-                      className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                      onClick={() => setIsPopupOpen(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ProfilePopup
+                isOpen={isPopupOpen}
+                onClose={() => {
+                  setIsPopupOpen(false);
+                  setProfileTick((t) => t + 1);
+                }}
+                selected={selected}
+              />
             )}
             <div className="mb-8 flex-row" >
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
@@ -97,6 +89,7 @@ export function MainContent({
             </div>
 
             <DisplacementSection
+              key={`displacement-${profileTick}`}
               selected={selected}
               jsonData={jsonData}
               isCompareMode={isCompareMode}
@@ -105,6 +98,7 @@ export function MainContent({
             <SectionDivider />
 
             <HistogramSection
+              key={`histogram-${profileTick}`}
               selected={selected}
               jsonData={jsonData}
               isCompareMode={isCompareMode}
