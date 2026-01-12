@@ -34,7 +34,7 @@
   
   .line-lowemphasis { 
     stroke: hsl(var(--foreground));
-    opacity: 0.35;
+    opacity: 0.25;
     stroke-width: 3px;
   }
 

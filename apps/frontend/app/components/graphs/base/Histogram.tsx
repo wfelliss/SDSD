@@ -8,7 +8,7 @@ export interface HistogramBin {
 }
 
 export interface HistogramProps {
-  bins: HistogramBin[];
+  data: number[];
   height?: number;
   xDomain?: [number, number];
   className?: string;
@@ -18,7 +18,7 @@ export interface HistogramProps {
 }
 
 export const Histogram: React.FC<HistogramProps> = ({ 
-  bins, 
+  data, 
   height = 500, 
   xDomain,
   className = "",
@@ -30,149 +30,103 @@ export const Histogram: React.FC<HistogramProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
-  // Persist D3 selections and scales to prevent recreation on every render
-  const d3Ref = useRef<any>({ initialized: false });
-
-  // 1. Responsive Resize Observer
+  // Responsive resize
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver(entries => {
-      if (!entries || entries.length === 0 || !entries[0]) return;
-      setWidth(entries[0].contentRect.width);
+      const entry = entries[0];
+      if (entry) setWidth(entry.contentRect.width);
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Main D3 Logic
+  // Main D3 rendering
   useEffect(() => {
-    if (!bins || bins.length === 0 || width === 0 || !containerRef.current) return;
+    if (!data?.length || width === 0 || !containerRef.current) return;
 
-    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
+    const marginTop = 20, marginRight = 20, marginBottom = 40, marginLeft = 40;
 
-    // --- INITIALIZATION ---
-    if (!d3Ref.current.initialized) {
-        d3.select(containerRef.current).selectAll("svg").remove();
+    // Bin the data
+    const bins = d3.bin()
+      .thresholds(20)
+      .domain(xDomain || (d3.extent(data) as [number, number]))
+      (data);
 
-        const svg = d3.select(containerRef.current)
-            .append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("class", "overflow-visible");
-        
-        const g = svg.append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
+    // Data present check
+    if (bins.length === 0) return;
+    const firstBin = bins[0]!;
+    const lastBin = bins[bins.length - 1]!;
 
-        const xAxisGroup = g.append("g").attr("class", "x-axis");
-        const yAxisGroup = g.append("g").attr("class", "y-axis");
-        
-        d3Ref.current = { 
-            initialized: true, 
-            svg, 
-            g, 
-            xAxisGroup, 
-            yAxisGroup,
-            x: d3.scaleLinear(), 
-            y: d3.scaleLinear()
-        };
-    }
+    // Create scales
+    const x = d3.scaleLinear()
+      .domain([firstBin.x0!, lastBin.x1!])
+      .range([marginLeft, width - marginRight]);
 
-    // --- UPDATES ---
-    const { svg, g, xAxisGroup, yAxisGroup, x, y } = d3Ref.current;
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(bins, d => d.length)!])
+      .range([height - marginBottom, marginTop]);
+
+    // Clear and create SVG
+    d3.select(containerRef.current).selectAll("svg").remove();
+    
+    const svg = d3.select(containerRef.current)
+      .append("svg")
+      .attr("viewBox", [0, 0, width, height])
+      .attr("style", "max-width: 100%; height: auto;");
+
     const tooltip = d3.select(tooltipRef.current);
 
-    // Update dimensions
-    svg.attr("width", width).attr("height", height);
-
-    // Determine Domain
-    const finalDomain = xDomain || [0, 100];
-    const dMin = finalDomain[0] ?? 0;
-    const dMax = finalDomain[1] ?? 100; 
-
-    x.range([0, innerWidth]).domain([dMin, dMax]);
-
-    // Update Y Scale 
-    const yMax = d3.max(bins, d => d.percent) || 0;
-    y.range([innerHeight, 0]).domain([0, yMax]);
-
-    // Draw X Axis
-    xAxisGroup
-        .attr("transform", `translate(0,${innerHeight})`)
-        .transition().duration(500)
-        .call(d3.axisBottom(x));
-
-    // Draw Y Axis
-    yAxisGroup
-        .transition().duration(500)
-        .call(d3.axisLeft(y).ticks(5).tickFormat(d =>
-          yMax < 10
-            ? d3.format("d")(Number(d))
-            : d3.format("~s")(Number(d))
-        ));
-
-    // Style Axes
-    svg.selectAll(".domain").attr("class", "stroke-border");
-    svg.selectAll(".tick line").attr("class", "stroke-border");
-    svg.selectAll(".tick text").attr("class", "text-muted-foreground text-xs");
-    yAxisGroup.select(".domain").remove(); 
-
-    // Render Bars
-    g.selectAll("rect")
+    // Add bars
+    svg.append("g")
+      .selectAll("rect")
       .data(bins)
-      .join(
-        (enter: any) => enter.append("rect")
-            .attr("x", (d: HistogramBin) => x(d.x0) + 1)
-            .attr("width", (d: HistogramBin) => Math.max(0, x(d.x1) - x(d.x0) - 1))
-            .attr("y", innerHeight)
-            .attr("height", 0)
-            .attr("rx", 2)
-            .attr("ry", 2), 
-        (update: any) => update,
-        (exit: any) => exit.transition().duration(500).attr("y", innerHeight).attr("height", 0).remove()
-      )
-      .attr("class", `bar-rect cursor-pointer transition-colors duration-200 ${colorClass}`)
-      .on("mouseenter", function (
-        this: SVGRectElement,
-        event: MouseEvent,
-        d: HistogramBin
-      ) {
-        d3.select(this)
-          .attr("class", `bar-rect cursor-pointer ${hoverColorClass}`);
-
-        tooltip
-          .style("opacity", 1)
-          .html(`
-            <div class="font-bold text-gray-900">${d.percent}%</div>
-          `);
-      })
-      .on("mousemove", (event: any) => {
+      .join("rect")
+        .attr("x", d => x(d.x0!) + 1)
+        .attr("width", d => Math.max(0, x(d.x1!) - x(d.x0!) - 1))
+        .attr("y", d => y(d.length))
+        .attr("height", d => y(0) - y(d.length))
+        .attr("rx", 2)
+        .attr("class", `cursor-pointer ${colorClass}`)
+        .on("mouseenter", function(_, d) {
+          d3.select(this).attr("class", `cursor-pointer ${hoverColorClass}`);
+          const pct = ((d.length / data.length) * 100).toFixed(1);
+          tooltip.style("opacity", 1)
+            .html(`<div class="font-bold text-gray-900">${pct}%</div>
+                   <div class="text-xs text-gray-500">Range: ${d.x0} - ${d.x1}</div>`);
+        })
+        .on("mousemove", (event) => {
           const [xPos, yPos] = d3.pointer(event, containerRef.current);
           tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
-      })
-      .on("mouseleave", function (this: SVGRectElement) {
-        d3.select(this)
-          .attr("class", `bar-rect cursor-pointer ${colorClass}`);
+        })
+        .on("mouseleave", function() {
+          d3.select(this).attr("class", `cursor-pointer ${colorClass}`);
+          tooltip.style("opacity", 0);
+        });
 
-        tooltip.style("opacity", 0);
-      })
-      .transition().duration(750).ease(d3.easeCubicOut)
-      .attr("x", (d: HistogramBin) => x(d.x0) + 1)
-      .attr("width", (d: HistogramBin) => Math.max(0, x(d.x1) - x(d.x0) - 1))
-      .attr("y", (d: HistogramBin) => y(d.percent))
-      .attr("height", (d: HistogramBin) => innerHeight - y(d.percent));
+    // Add x-axis
+    svg.append("g")
+      .attr("transform", `translate(0,${height - marginBottom})`)
+      .call(d3.axisBottom(x).ticks(width / 80).tickSizeOuter(0))
+      .call(g => g.selectAll(".domain, .tick line").attr("class", "stroke-border"))
+      .call(g => g.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
 
-  }, [bins, width, height, colorClass, hoverColorClass, xDomain]); 
+    // Add y-axis
+    const yMax = d3.max(bins, d => d.length) || 0;
+    const yTickFormat = yMax < 10 ? d3.format("d") : d3.format("~s");
+    
+    svg.append("g")
+      .attr("transform", `translate(${marginLeft},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickFormat(yTickFormat))
+      .call(g => g.selectAll(".domain, .tick line").attr("class", "stroke-border"))
+      .call(g => g.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
+
+  }, [data, width, height, colorClass, hoverColorClass, xDomain]); 
 
   return (
     <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative w-full ${className}`} ref={containerRef}>
       {title && <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>}
-      {/* Tooltip Element */}
-      <div 
-        ref={tooltipRef} 
-        className="absolute pointer-events-none opacity-0 transition-opacity bg-white border border-gray-200 p-2 rounded shadow-lg z-50 transform -translate-x-1/2 -translate-y-full text-center whitespace-nowrap"
-      />
+      <div ref={tooltipRef} className="absolute pointer-events-none opacity-0 transition-opacity bg-white border border-gray-200 p-2 rounded shadow-lg z-50 transform -translate-x-1/2 -translate-y-full text-center whitespace-nowrap"/>
     </div>
   );
 };

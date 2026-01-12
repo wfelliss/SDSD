@@ -17,7 +17,6 @@ interface DisplacementPlotProps {
     front?: RawSuspensionData[];
     rear?: RawSuspensionData[];
   };
-  width?: number;
   height?: number;
 }
 
@@ -25,7 +24,6 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
   title = "Displacement",
   series,
   dynamicSag,
-  width = 1000,
   height = 300
 }) => {  
  
@@ -56,7 +54,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
 
   if (chartData.length === 0 || chartData[0].length === 0) {
     return <div className="p-4 text-gray-400 italic">No data available for {title}</div>;
-  }
+  } 
 
   return (
     <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -74,12 +72,10 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
       </div>
 
       <div className="w-full overflow-hidden">
-        <LinePlot // use base LinePlot component
+        <LinePlot 
           data={chartData}
           yDomain={[0, 100]}
-
           height={height}
-
           classForSeries={(i) => {
             const mainCount = series.length;
             if (i < mainCount) {
