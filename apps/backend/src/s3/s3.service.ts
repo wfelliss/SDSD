@@ -244,6 +244,7 @@ export class S3Service {
           key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
         } catch (err) {
           this.logger.warn(`Invalid URL provided, using as key: ${pathOrUrl}`);
+          this.logger.warn(err);
         }
       }
 

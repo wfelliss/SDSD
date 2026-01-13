@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../database/database.module";
-import { runs, profiles, type Run, type NewRun } from "../database/schema";
+import { runs} from "../database/schema";
 
 @Injectable()
 export class RunsService {
