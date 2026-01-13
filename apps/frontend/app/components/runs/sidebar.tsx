@@ -1,5 +1,5 @@
 import {RunItem} from "app/types/runs";
-import {CheckIcon} from "lucide-react";
+import {ArrowDown, ArrowRight, CheckIcon} from "lucide-react";
 import {cn} from "app/lib/utils";
 
 import { useState, useMemo } from 'react';
@@ -43,11 +43,8 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
         </div>
         <span className="text-sm">{displayTitle}</span>
       </div>
-      <span className="text-sm font-light">
-        {run?.date && new Date(run.date).toLocaleDateString("en-GB", {timeZone: 'UTC'})}
-      </span>
     </button>
-  );
+  )
 }
 
 
@@ -68,7 +65,11 @@ const DateGroup = ({ date, runs, selected, setSelected}: DateGroupProps) => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:bg-slate-100 rounded transition-colors"
       >
-        <CheckIcon className="size-4" />
+        {isOpen ? (
+          <ArrowDown className="size-4" />
+        ) : (
+          <ArrowRight className="size-4" />
+        )}
         {date}
         <span className="ml-auto bg-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px]">
           {runs.length}
@@ -129,7 +130,7 @@ export function Sidebar({ runs, selected, setSelected } : SidebarProps) {
   }, [runs]);
 
   return (
-    <div className="w-64 h-max p-4 flex flex-col gap-4 bg-slate-50 border-r border-slate-100 text-slate-800">
+    <div className="w-64 min-h-screen h-max p-4 flex flex-col gap-4 bg-slate-50 border-r border-slate-100 text-slate-800">
       <div className="flex flex-col gap-1">
         <h1 className="font-semibold text-xl text-slate-700">Select runs to compare</h1>
         <h2 className="text-sm text-slate-500">You can compare up to 2 runs</h2>
