@@ -2,7 +2,7 @@ import { RunItem, RunJson } from "app/types/runs";
 import { DisplacementSection, HistogramSection } from "app/components/runs/chart-sections";
 import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-elements"; 
 import { useState } from "react";
-import { ProfilePopup } from "../profiles/profilePopup";
+import { ProfilePopup } from "../profiles/profilePopUp";
 import { UserIcon } from "lucide-react";
 interface MainContentProps {
   selected: RunItem[];
