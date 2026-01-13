@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Backend Tests
       
-        run: bun run turbo run typecheck lint build db:check --filter=backend
+        run: bun run turbo run check-types lint build db:check --filter=backend
 
   # ------------------------------------------------------------------
   # JOB 2: FRONTEND (React Router)
@@ -54,4 +54,4 @@ jobs:
 
       - name: Run Frontend Tests
         # --filter=web... targets the 'web' package AND its dependencies
-        run: bun run turbo run typecheck lint build --filter=frontend
+        run: bun run turbo run check-types lint build --filter=frontend
