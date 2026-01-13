@@ -7,17 +7,15 @@ import {
   ArrowRightIcon,
   CheckIcon,
   ClockIcon,
-  CrossIcon,
   EditIcon,
   LoaderCircleIcon,
-  LoaderIcon,
   UserIcon,
   XIcon,
 } from "lucide-react";
 import { cn, formatDate } from "app/lib/utils";
 import { useState } from "react";
 import { Transition } from "@headlessui/react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation} from "@tanstack/react-query";
 import { getProfiles } from "app/api/profiles";
 
 export const meta: MetaFunction = () => {
@@ -48,7 +46,7 @@ interface Profile {
 }
 
 export default function ProfilesPage() {
-  const { profiles, error } = useLoaderData<typeof loader>();
+  const { profiles} = useLoaderData<typeof loader>();
 
   return (
     <div className="flex flex-col items-center pt-20">
@@ -80,7 +78,6 @@ async function partialUpdateProfile(
 ) {
   return await apiClient.patch(`/profiles/${profileId}`, partialProfile);
 }
-``
 function ProfileRow({ profile: initialProfile }: ProfileRowProps) {
   const [editing, setEditing] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -182,7 +179,7 @@ function ProfileRow({ profile: initialProfile }: ProfileRowProps) {
               </button>
               <button
                 onClick={() => {
-                  const { id, createdAt, updatedAt, ...editableFields } =
+                  const {...editableFields } =
                     profile;
                   updateProfile(editableFields).then(() => setEditing(false));
                 }}
