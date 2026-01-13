@@ -234,7 +234,7 @@ export class S3Controller {
         back_max: back_max,
       }
       console.log('💾 Creating profile record with data:', JSON.stringify(profileData, null, 2));
-      let profile = await this.profilesService.create(profileData);
+      const profile = await this.profilesService.create(profileData);
       console.log('💾 Created profile record:', profile);
 
       const runData = {
