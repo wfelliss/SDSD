@@ -56,7 +56,7 @@ interface DateGroupProps {
 }
 // 2. The "Folder" Component
 const DateGroup = ({ date, runs, selected, setSelected}: DateGroupProps) => {
-  const [isOpen, setIsOpen] = useState(true); // Default to open
+  const [isOpen, setIsOpen] = useState(false); // Default to open
 
   return (
     <li className="flex flex-col gap-1">
@@ -142,16 +142,20 @@ export function Sidebar({ runs, selected, setSelected } : SidebarProps) {
             No runs available - go ride your bike
           </li>
         ) : (
-          // Iterate over the Object Keys (The Dates)
-          Object.entries(groupedRuns).map(([date, groupRuns]) => (
-            <DateGroup
-              key={date}
-              date={date}
-              runs={groupRuns}
-              selected={selected}
-              setSelected={setSelected}
-            />
-          ))
+          // Iterate over the Object Keys (The Dates) in reverse order
+          Object.keys(groupedRuns).reverse().map((date) => {
+            const groupRuns = groupedRuns[date];
+            if (!groupRuns) { return}
+            return (
+              <DateGroup
+                key={date}
+                date={date}
+                runs={groupRuns}
+                selected={selected}
+                setSelected={setSelected}
+              />
+            )
+          })
         )}
       </ul>
     </div>
