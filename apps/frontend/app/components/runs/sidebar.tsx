@@ -99,7 +99,7 @@ interface SidebarProps {
   setSelected: (runs: RunItem[]) => void;
 }
 
-export default function Sidebar({ runs, selected, setSelected } : SidebarProps) {
+export function Sidebar({ runs, selected, setSelected } : SidebarProps) {
   
   // Logic: Group runs by date
   // Assumes run.date exists. If your property is run.createdAt, change it below.
