@@ -66,30 +66,30 @@ export class S3Controller {
    * Ensure the provided key does not already exist in the bucket. If it does,
    * append a numeric suffix before the extension (or at end) to make it unique.
    */
-  private async ensureUniqueKey(originalKey: string): Promise<string> {
+private async ensureUniqueKey(originalKey: string): Promise<string> {
     let candidate = originalKey;
     let i = 1;
+    
     while (true) {
-      try {
+        // Fix: Removed try/catch. If objectExists fails, it will throw automatically.
         const exists = await this.s3Service.objectExists(candidate);
-        if (!exists) return candidate;
-      } catch (err) {
-        // If objectExists threw due to other errors, rethrow
-        throw err;
-      }
+        
+        if (!exists) {
+            return candidate;
+        }
 
-      // build next candidate with suffix
-      const extIndex = originalKey.lastIndexOf('.');
-      if (extIndex > 0) {
-        const base = originalKey.slice(0, extIndex);
-        const ext = originalKey.slice(extIndex);
-        candidate = `${base}-${i}${ext}`;
-      } else {
-        candidate = `${originalKey}-${i}`;
-      }
-      i += 1;
+        // build next candidate with suffix
+        const extIndex = originalKey.lastIndexOf('.');
+        if (extIndex > 0) {
+            const base = originalKey.slice(0, extIndex);
+            const ext = originalKey.slice(extIndex);
+            candidate = `${base}-${i}${ext}`;
+        } else {
+            candidate = `${originalKey}-${i}`;
+        }
+        i += 1;
     }
-  }
+}
 
   private parseCsvToColumnArrays(csv: string) {
     const rows = csv.trim().split('\n').map(r => r.split(','));
@@ -293,4 +293,4 @@ export class S3Controller {
   }
 
   // `newRun` JSON endpoint removed; `newRunFile` handles uploads now.
-}``
+}
