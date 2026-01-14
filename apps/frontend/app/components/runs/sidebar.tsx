@@ -1,5 +1,6 @@
 import {RunItem} from "app/types/runs";
 import {ArrowDown, ArrowRight, CheckIcon} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {cn} from "app/lib/utils";
 
 import { useState, useMemo } from 'react';
@@ -55,40 +56,50 @@ interface DateGroupProps {
   setSelected: (runs: RunItem[]) => void;
 }
 // 2. The "Folder" Component
-const DateGroup = ({ date, runs, selected, setSelected}: DateGroupProps) => {
-  const [isOpen, setIsOpen] = useState(false); // Default to open
+const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <li className="flex flex-col gap-1">
       {/* Folder Header */}
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:bg-slate-100 rounded transition-colors"
       >
-        {isOpen ? (
-          <ArrowDown className="size-4" />
-        ) : (
+        <motion.span
+          animate={{ rotate: isOpen ? 90 : 0 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+          className="size-4 flex items-center"
+        >
           <ArrowRight className="size-4" />
-        )}
+        </motion.span>
         {date}
         <span className="ml-auto bg-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px]">
           {runs.length}
         </span>
       </button>
 
-      {/* Dropdown Content */}
-      {isOpen && (
-        <ul className="flex flex-col pl-2 border-l border-slate-200 ml-3 gap-1">
-          {runs.map((run) => (
-            <SidebarMenuButton
-              key={run.id}
-              run={run}
-              selected={selected}
-              setSelected={setSelected}
-            />
-          ))}
-        </ul>
-      )}
+      {/* Animated Dropdown Content */}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.ul
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="flex flex-col pl-2 border-l border-slate-200 ml-3 gap-1 overflow-hidden"
+          >
+            {runs.map((run) => (
+              <SidebarMenuButton
+                key={run.id}
+                run={run}
+                selected={selected}
+                setSelected={setSelected}
+              />
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
     </li>
   );
 };
@@ -131,7 +142,11 @@ export function Sidebar({ runs, selected, setSelected } : SidebarProps) {
 
   return (
     <div className="w-64 min-h-screen h-max p-4 flex flex-col gap-4 bg-slate-50 border-r border-slate-100 text-slate-800">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col">
+        <div className="flex items-center gap-x-4 m-1">
+          <img className="w-[30%]" src="/logo-full.png" alt="Logo" />
+          <h1 className="text-l font-bold tracking-tight text-text-primary whitespace-nowrap">Telemetry System</h1>
+        </div>
         <h1 className="font-semibold text-xl text-slate-700">Select runs to compare</h1>
         <h2 className="text-sm text-slate-500">You can compare up to 2 runs</h2>
       </div>
