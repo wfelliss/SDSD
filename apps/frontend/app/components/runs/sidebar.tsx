@@ -1,5 +1,5 @@
 import {RunItem} from "app/types/runs";
-import {ArrowDown, ArrowRight, CheckIcon} from "lucide-react";
+import {ArrowRight, CheckIcon} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {cn} from "app/lib/utils";
 
@@ -59,6 +59,9 @@ interface DateGroupProps {
 const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Check if any run in this group is selected
+  const hasSelectedRuns = runs.some(run => selected.some(r => r.id === run.id));
+
   return (
     <li className="flex flex-col gap-1">
       {/* Folder Header */}
@@ -66,13 +69,17 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:bg-slate-100 rounded transition-colors"
       >
+        {/* Rotating Arrow */}
         <motion.span
-          animate={{ rotate: isOpen ? 90 : 0 }}
+          animate={{ 
+            rotate: isOpen ? 90 : hasSelectedRuns ? 45 : 0  // 0° = closed, 45° = closed with selected, 90° = fully open
+          }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
           className="size-4 flex items-center"
         >
           <ArrowRight className="size-4" />
         </motion.span>
+
         {date}
         <span className="ml-auto bg-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px]">
           {runs.length}
@@ -81,22 +88,24 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
 
       {/* Animated Dropdown Content */}
       <AnimatePresence initial={false}>
-        {isOpen && (
+        {(isOpen || hasSelectedRuns) && (
           <motion.ul
+            key={isOpen ? "all" : "selected"}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="flex flex-col pl-2 border-l border-slate-200 ml-3 gap-1 overflow-hidden"
           >
-            {runs.map((run) => (
-              <SidebarMenuButton
-                key={run.id}
-                run={run}
-                selected={selected}
-                setSelected={setSelected}
-              />
-            ))}
+            {(isOpen ? runs : runs.filter(run => selected.some(r => r.id === run.id)))
+              .map((run) => (
+                <SidebarMenuButton
+                  key={run.id}
+                  run={run}
+                  selected={selected}
+                  setSelected={setSelected}
+                />
+              ))}
           </motion.ul>
         )}
       </AnimatePresence>
