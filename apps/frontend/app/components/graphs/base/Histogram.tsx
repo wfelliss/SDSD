@@ -116,12 +116,10 @@ export const Histogram: React.FC<HistogramProps> = ({
     // Draw X Axis
     xAxisGroup
         .attr("transform", `translate(0,${innerHeight})`)
-        .transition().duration(500)
         .call(d3.axisBottom(x));
 
     // Draw Y Axis
     yAxisGroup
-        .transition().duration(500)
         .call(d3.axisLeft(y).ticks(5).tickFormat(d =>
           yMax < 10
             ? d3.format("d")(Number(d))
@@ -146,7 +144,7 @@ export const Histogram: React.FC<HistogramProps> = ({
             .attr("rx", 2)
             .attr("ry", 2), 
         (update: any) => update,
-        (exit: any) => exit.transition().duration(500).attr("y", innerHeight).attr("height", 0).remove()
+        (exit: any) => exit.transition().duration(0).attr("y", innerHeight).attr("height", 0).remove()
       )
       .attr("class", `bar-rect cursor-pointer transition-colors duration-200 ${colorClass}`)
       .on("mouseenter", function (
@@ -173,7 +171,6 @@ export const Histogram: React.FC<HistogramProps> = ({
 
         tooltip.style("opacity", 0);
       })
-      .transition().duration(750).ease(d3.easeCubicOut)
       .attr("x", (d: HistogramBin) => x(d.x0) + 1)
       .attr("width", (d: HistogramBin) => Math.max(0, x(d.x1) - x(d.x0) - 1))
       .attr("y", (d: HistogramBin) => y(d.percent))
