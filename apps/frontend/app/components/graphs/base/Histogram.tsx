@@ -60,10 +60,18 @@ export const Histogram: React.FC<HistogramProps> = ({
             .append("svg")
             .attr("width", width)
             .attr("height", height)
-            .attr("class", "overflow-visible");
+            .attr("class", "overflow-hidden");
         
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Add clip path to prevent overflow
+        svg.append("defs")
+            .append("clipPath")
+            .attr("id", "clip")
+            .append("rect")
+            .attr("width", innerWidth)
+            .attr("height", innerHeight);
 
         const xAxisGroup = g.append("g").attr("class", "x-axis");
         const yAxisGroup = g.append("g").attr("class", "y-axis");
@@ -75,12 +83,20 @@ export const Histogram: React.FC<HistogramProps> = ({
             xAxisGroup, 
             yAxisGroup,
             x: d3.scaleLinear(), 
-            y: d3.scaleLinear()
+            y: d3.scaleLinear(),
+            clipPath: svg.select("#clip rect")
         };
     }
 
     // --- UPDATES ---
-    const { svg, g, xAxisGroup, yAxisGroup, x, y } = d3Ref.current;
+    const { svg, g, xAxisGroup, yAxisGroup, x, y, clipPath } = d3Ref.current;
+
+    // Update clip path dimensions
+    clipPath.attr("width", innerWidth).attr("height", innerHeight);
+
+    // Apply clip path to the main group
+    g.attr("clip-path", "url(#clip)");
+
     const tooltip = d3.select(tooltipRef.current);
 
     // Update dimensions
