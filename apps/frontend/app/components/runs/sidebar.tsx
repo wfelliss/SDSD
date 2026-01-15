@@ -42,7 +42,7 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
         >
           {isSelected && <CheckIcon className="size-full text-white" strokeWidth={4} />}
         </div>
-        <span className="text-sm">{displayTitle}</span>
+        <span className="text-sm truncate">{displayTitle}</span>
       </div>
     </button>
   );
@@ -72,13 +72,13 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
             rotate: isOpen ? 90 : hasSelectedRuns ? 45 : 0
           }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="size-4 flex items-center"
+          className="size-4 flex items-center shrink-0"
         >
           <ArrowRight className="size-4" />
         </motion.span>
 
-        {date}
-        <span className="ml-auto bg-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px]">
+        <span className="truncate">{date}</span>
+        <span className="ml-auto bg-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shrink-0">
           {runs.length}
         </span>
       </button>
@@ -144,69 +144,71 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
 
   return (
     <>
-      {/* Collapsible Sidebar */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {!collapsed && (
-        <motion.div
-          initial={{ x: -300, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -300, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 w-64 h-screen flex flex-col bg-slate-50 border-r border-slate-100 text-slate-800 z-50"
-        >
-          {/* Header + title */}
-          <div className="p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-x-4">
-              <img className="w-[30%]" src="/logo-full.png" alt="Logo" />
-              <h1 className="text-l font-bold tracking-tight text-text-primary whitespace-nowrap">
-                Telemetry System
-              </h1>
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "16rem", opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="sticky top-0 h-screen bg-slate-50 border-r border-slate-100 text-slate-800 z-40 overflow-hidden shrink-0"
+          >
+
+            <div className="w-64 h-full flex flex-col">
+              {/* Header + title */}
+              <div className="p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-x-4">
+                  <img className="w-[30%]" src="/logo-full.png" alt="Logo" />
+                  <h1 className="text-l font-bold tracking-tight text-text-primary whitespace-nowrap">
+                    Telemetry System
+                  </h1>
+                </div>
+                <h1 className="font-semibold text-xl text-slate-700 whitespace-nowrap">Select runs to compare</h1>
+                <h2 className="text-sm text-slate-500 whitespace-nowrap">You can compare up to 2 runs</h2>
+              </div>
+
+              {/* Scrollable runs list */}
+              <div className="flex-1 overflow-y-auto px-4 pb-16 scrollbar-hide">
+                <ul className="flex flex-col gap-2 w-full">
+                  {runs.length === 0 ? (
+                    <li className="text-slate-500 text-sm border-orange-400 border-l-2 bg-orange-400/10 px-2 py-1 rounded-xs">
+                      No runs available - go ride your bike
+                    </li>
+                  ) : (
+                    Object.keys(groupedRuns)
+                      .reverse()
+                      .map((date) => {
+                        const groupRuns = groupedRuns[date];
+                        if (!groupRuns) return null;
+                        return (
+                          <DateGroup
+                            key={date}
+                            date={date}
+                            runs={groupRuns}
+                            selected={selected}
+                            setSelected={setSelected}
+                          />
+                        );
+                      })
+                  )}
+                </ul>
+              </div>
+
+              {/* Collapse button at bottom right of sidebar */}
+              <div className="absolute bottom-4 right-4">
+                <button
+                  onClick={() => setCollapsed(true)}
+                  className="p-2 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"
+                >
+                  <ArrowLeft className="size-4" />
+                </button>
+              </div>
             </div>
-            <h1 className="font-semibold text-xl text-slate-700">Select runs to compare</h1>
-            <h2 className="text-sm text-slate-500">You can compare up to 2 runs</h2>
-          </div>
-
-          {/* Scrollable runs list */}
-          <div className="flex-1 overflow-y-auto px-4 pb-16 scrollbar-hide">
-            <ul className="flex flex-col gap-2">
-              {runs.length === 0 ? (
-                <li className="text-slate-500 text-sm border-orange-400 border-l-2 bg-orange-400/10 px-2 py-1 rounded-xs">
-                  No runs available - go ride your bike
-                </li>
-              ) : (
-                Object.keys(groupedRuns)
-                  .reverse()
-                  .map((date) => {
-                    const groupRuns = groupedRuns[date];
-                    if (!groupRuns) return null;
-                    return (
-                      <DateGroup
-                        key={date}
-                        date={date}
-                        runs={groupRuns}
-                        selected={selected}
-                        setSelected={setSelected}
-                      />
-                    );
-                  })
-              )}
-            </ul>
-          </div>
-
-          {/* Collapse button at bottom right of sidebar */}
-          <div className="absolute bottom-4 right-4">
-            <button
-              onClick={() => setCollapsed(true)}
-              className="p-2 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"
-            >
-              <ArrowLeft className="size-4" />
-            </button>
-          </div>
-        </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Re-open button when collapsed (bottom left of screen) */}
+      {/* Re-open button when collapsed (Fixed position is okay here as it floats over content) */}
       <AnimatePresence>
         {collapsed && (
           <motion.button
@@ -215,7 +217,7 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={() => setCollapsed(false)}
-            className="fixed bottom-4 left-4 p-3 bg-card-background-primary rounded-full hover:bg-slate-300 z-50"
+            className="fixed bottom-4 left-4 p-3 bg-slate-800 text-white rounded-full hover:bg-slate-700 z-50 shadow-lg"
           >
             <ArrowRight className="size-4" />
           </motion.button>
