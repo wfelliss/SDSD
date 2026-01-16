@@ -65,14 +65,6 @@ export const Histogram: React.FC<HistogramProps> = ({
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // Add clip path to prevent overflow
-        svg.append("defs")
-            .append("clipPath")
-            .attr("id", "clip")
-            .append("rect")
-            .attr("width", innerWidth)
-            .attr("height", innerHeight);
-
         const xAxisGroup = g.append("g").attr("class", "x-axis");
         const yAxisGroup = g.append("g").attr("class", "y-axis");
         
@@ -83,20 +75,12 @@ export const Histogram: React.FC<HistogramProps> = ({
             xAxisGroup, 
             yAxisGroup,
             x: d3.scaleLinear(), 
-            y: d3.scaleLinear(),
-            clipPath: svg.select("#clip rect")
+            y: d3.scaleLinear()
         };
     }
 
     // --- UPDATES ---
-    const { svg, g, xAxisGroup, yAxisGroup, x, y, clipPath } = d3Ref.current;
-
-    // Update clip path dimensions
-    clipPath.attr("width", innerWidth).attr("height", innerHeight);
-
-    // Apply clip path to the main group
-    g.attr("clip-path", "url(#clip)");
-
+    const { svg, g, xAxisGroup, yAxisGroup, x, y } = d3Ref.current;
     const tooltip = d3.select(tooltipRef.current);
 
     // Update dimensions
@@ -116,10 +100,12 @@ export const Histogram: React.FC<HistogramProps> = ({
     // Draw X Axis
     xAxisGroup
         .attr("transform", `translate(0,${innerHeight})`)
+        .transition().duration(500)
         .call(d3.axisBottom(x));
 
     // Draw Y Axis
     yAxisGroup
+        .transition().duration(500)
         .call(d3.axisLeft(y).ticks(5).tickFormat(d =>
           yMax < 10
             ? d3.format("d")(Number(d))
@@ -144,7 +130,7 @@ export const Histogram: React.FC<HistogramProps> = ({
             .attr("rx", 2)
             .attr("ry", 2), 
         (update: any) => update,
-        (exit: any) => exit.transition().duration(0).attr("y", innerHeight).attr("height", 0).remove()
+        (exit: any) => exit.transition().duration(500).attr("y", innerHeight).attr("height", 0).remove()
       )
       .attr("class", `bar-rect cursor-pointer transition-colors duration-200 ${colorClass}`)
       .on("mouseenter", function (
@@ -171,6 +157,7 @@ export const Histogram: React.FC<HistogramProps> = ({
 
         tooltip.style("opacity", 0);
       })
+      .transition().duration(750).ease(d3.easeCubicOut)
       .attr("x", (d: HistogramBin) => x(d.x0) + 1)
       .attr("width", (d: HistogramBin) => Math.max(0, x(d.x1) - x(d.x0) - 1))
       .attr("y", (d: HistogramBin) => y(d.percent))
