@@ -18,12 +18,6 @@ function SidebarMenuButton({
 }: SidebarMenuButtonProps) {
   const isSelected = selected.some((r) => r.id === run.id);
 
-  const displayTitle = run.title
-    ? run.title.length > 24
-      ? `${run.title.slice(0, 24)}...`
-      : run.title
-    : "";
-
   const toggle = () => {
     if (isSelected) {
       setSelected(selected.filter((r) => r.id !== run.id));
@@ -37,7 +31,7 @@ function SidebarMenuButton({
       className="w-full rounded-md group hover:bg-slate-100 flex justify-between items-center p-2 cursor-pointer"
       onClick={toggle}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-full">
         <div
           className={cn(
             "size-4 border-indigo-700 border-2 rounded group-hover:border-indigo-600",
@@ -48,7 +42,7 @@ function SidebarMenuButton({
             <CheckIcon className="size-full text-white" strokeWidth={4} />
           )}
         </div>
-        <span className="text-sm truncate">{displayTitle}</span>
+        <span className="text-sm truncate">{run.title}</span>
       </div>
     </button>
   );
