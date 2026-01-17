@@ -10,7 +10,7 @@ import {
   Put,
 } from "@nestjs/common";
 import { ProfilesService } from "./profiles.service";
-import { NewProfile, Profile } from "src/database/schema";
+import { NewProfile, Profile } from "@repo/database";
 
 @Controller("profiles")
 export class ProfilesController {

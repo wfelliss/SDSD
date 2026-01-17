@@ -28,10 +28,10 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Run Backend Tests
-      
+
         run: bun run turbo run check-types lint build db:check --filter=backend
 
   # ------------------------------------------------------------------
@@ -50,7 +50,7 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Run Frontend Tests
         # --filter=web... targets the 'web' package AND its dependencies

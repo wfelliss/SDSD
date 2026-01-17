@@ -1,4 +1,4 @@
-import { RunItem } from "app/types/runs";
+import { Run } from "@repo/database";
 import { ArrowRight, ArrowLeft, CheckIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "app/lib/utils";
@@ -6,12 +6,16 @@ import { useState, useMemo } from "react";
 
 // ----------------- Sidebar Menu Button -----------------
 interface SidebarMenuButtonProps {
-  run: RunItem;
-  selected: RunItem[];
-  setSelected: (runs: RunItem[]) => void;
+  run: Run;
+  selected: Run[];
+  setSelected: (runs: Run[]) => void;
 }
 
-function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProps) {
+function SidebarMenuButton({
+  run,
+  selected,
+  setSelected,
+}: SidebarMenuButtonProps) {
   const isSelected = selected.some((r) => r.id === run.id);
 
   const displayTitle = run.title
@@ -40,7 +44,9 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
             isSelected && "bg-indigo-700"
           )}
         >
-          {isSelected && <CheckIcon className="size-full text-white" strokeWidth={4} />}
+          {isSelected && (
+            <CheckIcon className="size-full text-white" strokeWidth={4} />
+          )}
         </div>
         <span className="text-sm truncate">{displayTitle}</span>
       </div>
@@ -51,9 +57,9 @@ function SidebarMenuButton({ run, selected, setSelected }: SidebarMenuButtonProp
 // ----------------- Date Group -----------------
 interface DateGroupProps {
   date: string;
-  runs: RunItem[];
-  selected: RunItem[];
-  setSelected: (runs: RunItem[]) => void;
+  runs: Run[];
+  selected: Run[];
+  setSelected: (runs: Run[]) => void;
 }
 
 const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
@@ -115,9 +121,9 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
 
 // ----------------- Sidebar -----------------
 interface SidebarProps {
-  runs: RunItem[];
-  selected: RunItem[];
-  setSelected: (runs: RunItem[]) => void;
+  runs: Run[];
+  selected: Run[];
+  setSelected: (runs: Run[]) => void;
 }
 
 export function Sidebar({ runs, selected, setSelected }: SidebarProps) {

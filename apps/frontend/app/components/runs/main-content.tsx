@@ -1,9 +1,17 @@
-import { RunItem, RunJson } from "app/types/runs";
-import { DisplacementSection, HistogramSection } from "app/components/runs/chart-sections";
-import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-elements";
+import { RunJson } from "app/types/runs";
+import {
+  DisplacementSection,
+  HistogramSection,
+} from "app/components/runs/chart-sections";
+import {
+  EmptyState,
+  LoadingState,
+  SectionDivider,
+} from "app/components/ui/run-elements";
+import { Run } from "@repo/database";
 
 interface MainContentProps {
-  selected: RunItem[];
+  selected: Run[];
   jsonData: Record<number, RunJson>;
   loadingJson: boolean;
   isCompareMode: boolean;
@@ -51,14 +59,18 @@ export function MainContent({
             role="alert"
             className="mb-6 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700"
           >
-            <strong className="block font-medium">Error loading run data</strong>
+            <strong className="block font-medium">
+              Error loading run data
+            </strong>
             <ul className="mt-2 list-disc list-inside">
               {fetchErrors.map((e) => (
                 <li key={e.id}>
                   {e.title ? `${e.title}: ` : `Run ${e.id}: `}
                   {e.message}
-                  {'\n'}
-                  {" Please check the backend server and S3 storage are running and connected."}
+                  {"\n"}
+                  {
+                    " Please check the backend server and S3 storage are running and connected."
+                  }
                 </li>
               ))}
             </ul>
@@ -68,7 +80,9 @@ export function MainContent({
           <>
             <div className="mb-8">
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isCompareMode ? "Run Comparison" : selected[0]?.title || "Run Details"}
+                {isCompareMode
+                  ? "Run Comparison"
+                  : selected[0]?.title || "Run Details"}
               </h1>
             </div>
 
@@ -87,8 +101,6 @@ export function MainContent({
             />
           </>
         )}
-
-
       </div>
     </main>
   );

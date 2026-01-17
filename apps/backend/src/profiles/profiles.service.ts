@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
-import { NewProfile, Profile, profiles } from "src/database/schema";
+import { NewProfile, Profile, profiles } from "@repo/database";
 
 @Injectable()
 export class ProfilesService {
