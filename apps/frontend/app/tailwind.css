@@ -31,6 +31,14 @@
 }
 
 @layer components {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
   .line-path {
     @apply fill-none stroke-[2px] transition-colors duration-300;
   }
