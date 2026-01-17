@@ -1,14 +1,10 @@
 import { apiClient } from "./client";
-
-export interface Run {
-  id: number;
-  srcPath: string;
-  title: string;
-  date?: string;
-  location?: string;
-  length?: number;
-}
+import { Run } from "@repo/database";
 
 export function getRuns() {
   return apiClient.get<Run[]>("/runs");
+}
+
+export function getRunById(id: number) {
+  return apiClient.get<Run>(`/runs/${id}`);
 }

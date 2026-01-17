@@ -60,7 +60,7 @@ export const Histogram: React.FC<HistogramProps> = ({
             .append("svg")
             .attr("width", width)
             .attr("height", height)
-            .attr("class", "overflow-visible");
+            .attr("class", "overflow-hidden");
         
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
