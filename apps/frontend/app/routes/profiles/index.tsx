@@ -1,6 +1,6 @@
 import type { MetaFunction } from "react-router";
 import { useLoaderData } from "react-router";
-import { apiClient} from "app/api/client";
+import { apiClient } from "app/api/client";
 
 import {
   ArrowLeftIcon,
@@ -15,8 +15,9 @@ import {
 import { cn, formatDate } from "app/lib/utils";
 import { useState } from "react";
 import { Transition } from "@headlessui/react";
-import { useMutation} from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { getProfiles } from "app/api/profiles";
+import { Profile } from "@repo/database";
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,17 +34,6 @@ export const loader = async () => {
     return { profiles: [], error: "Failed to load profiles." };
   }
 };
-
-interface Profile {
-  id: number;
-  name: string;
-  front_min: number;
-  front_max: number;
-  back_min: number;
-  back_max: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function ProfilesPage() {
   const { profiles} = useLoaderData<typeof loader>();
@@ -78,6 +68,7 @@ async function partialUpdateProfile(
 ) {
   return await apiClient.patch(`/profiles/${profileId}`, partialProfile);
 }
+
 function ProfileRow({ profile: initialProfile }: ProfileRowProps) {
   const [editing, setEditing] = useState(false);
   const [hovering, setHovering] = useState(false);

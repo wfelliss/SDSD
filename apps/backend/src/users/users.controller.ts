@@ -9,7 +9,7 @@ import {
   ParseIntPipe,
 } from "@nestjs/common";
 import { UsersService } from "./users.service";
-import { type User, type NewUser } from "../database/schema";
+import { type User, type NewUser } from "@repo/database";
 
 @Controller("users")
 export class UsersController {
