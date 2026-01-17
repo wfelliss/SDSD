@@ -23,6 +23,7 @@
         "@nestjs/config": "^3.2.3",
         "@nestjs/core": "^10.4.4",
         "@nestjs/platform-express": "^10.4.4",
+        "@repo/database": "*",
         "drizzle-orm": "^0.33.0",
         "multer": "^1.4.5-lts.1",
         "postgres": "^3.4.4",
@@ -62,6 +63,7 @@
         "@headlessui/react": "^2.2.9",
         "@react-router/node": "^7.0.1",
         "@react-router/serve": "7.12.0",
+        "@repo/database": "*",
         "@tailwindcss/postcss": "^4.1.17",
         "@tailwindcss/vite": "^4.1.17",
         "@tanstack/react-query": "^5.90.16",
@@ -94,6 +96,20 @@
         "vite": "^6.0.1",
         "vite-plugin-devtools-json": "^1.0.0",
         "vite-tsconfig-paths": "^5.1.2",
+      },
+    },
+    "packages/database": {
+      "name": "@repo/database",
+      "version": "0.1.0",
+      "dependencies": {
+        "drizzle-orm": "^0.33.0",
+        "postgres": "^3.4.4",
+      },
+      "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "^22.15.3",
+        "drizzle-kit": "^0.24.2",
+        "typescript": "5.9.2",
       },
     },
     "packages/eslint-config": {
@@ -514,6 +530,8 @@
     "@react-types/shared": ["@react-types/shared@3.32.1", "", { "peerDependencies": { "react": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1" } }, "sha512-famxyD5emrGGpFuUlgOP6fVW2h/ZaF405G5KDi3zPHzyjAWys/8W6NAVJtNbkCkhedmvL0xOhvt8feGXyXaw5w=="],
 
     "@remix-run/node-fetch-server": ["@remix-run/node-fetch-server@0.9.0", "", {}, "sha512-SoLMv7dbH+njWzXnOY6fI08dFMI5+/dQ+vY3n8RnnbdG7MdJEgiP28Xj/xWlnRnED/aB6SFw56Zop+LbmaaKqA=="],
+
+    "@repo/database": ["@repo/database@workspace:packages/database"],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
 
