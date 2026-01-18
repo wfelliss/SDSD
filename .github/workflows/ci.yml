@@ -33,6 +33,12 @@ jobs:
       - name: Run Backend Tests
         run: bun run turbo run check-types lint build db:check --filter=backend
 
+      - name: Build the database
+        run: bun run --filter=@repo/database build && bun run --filter=backend build
+
+      - name: Build the backend
+        run: bun run --filter=backend build
+
   # ------------------------------------------------------------------
   # JOB 2: FRONTEND (React Router)
   # ------------------------------------------------------------------
@@ -56,6 +62,3 @@ jobs:
 
       - name: Build the frontend
         run: cd apps/frontend && bun install && bun run build
-
-      - name: Start the frontend
-        run: cd apps/frontend && bun install && bun run start
