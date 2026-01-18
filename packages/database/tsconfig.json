@@ -4,8 +4,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "noEmit": false,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",        
+    "moduleResolution": "Node",
     "declaration": true,
     "declarationMap": true,
     "isolatedDeclarations": false
