@@ -11,4 +11,5 @@ export default [
     route("profiles", "routes/profiles/index.tsx"),
     route("testing", "routes/testing.tsx"),
   ]),
+  route("maintenance", "routes/maintenance.tsx")
 ] satisfies RouteConfig;
