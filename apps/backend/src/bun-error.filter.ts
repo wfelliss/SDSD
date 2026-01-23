@@ -18,7 +18,12 @@ export class BunErrorFilter implements ExceptionFilter {
           this.logger.error(`Error #${index + 1}: ${err.message}`);
           if (err.code) this.logger.error(`Code: ${err.code}`);
           if (err.syscall) this.logger.error(`Syscall: ${err.syscall}`);
-          this.logger.error(`Full details for inner error #${index + 1}:`, err);        
+          this.logger.error(`Error #${index + 1}: ${err.message}`);
+          if (err instanceof Error) {
+            this.logger.error(`Stack for inner error #${index + 1}:`, err.stack);
+          } else {
+            this.logger.error(`Full details for non-error inner exception #${index + 1}:`, err);
+          }
         });
       }
     } else {

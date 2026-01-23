@@ -15,11 +15,6 @@ export class S3Service {
     const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
     this.bucket = this.configService.get<string>('AWS_S3_BUCKET');
 
-    // DEBUG: Ensure Env Vars are loaded correctly
-    this.logger.log(
-      `Debug S3 Config: Region=[${region}] Bucket=[${this.bucket}] AccessKeyLength=[${accessKeyId?.length || 0}]`,
-    );
-
     if (!accessKeyId || !secretAccessKey || !this.bucket) {
       const errorMessage = 'Missing AWS Configuration in environment variables! S3Service cannot be initialized.';
       this.logger.error(errorMessage);
@@ -63,10 +58,6 @@ export class S3Service {
       const file = this.s3Client.file(key);
       return await file.exists();
     } catch (err: any) {
-      // (Note: Bun's .exists() usually just returns false without throwing, but we keep this safely)
-      if (err?.message?.includes('404') || err?.code === 'NotFound') {
-        return false;
-      }
       // 2. Unwrap and Log AggregateErrors (common in Bun S3)
       if (err instanceof AggregateError) {
         this.logger.error(`AggregateError checking existence of ${key}:`);
@@ -118,8 +109,7 @@ export class S3Service {
       // Bun returns .contents (lowercase) and each file has a .key (lowercase)
       return (response.contents ?? []).map((file) => file.key);
     } catch (error) {
-      this.logger.error(`Error listing files with prefix ${prefix}:`, error);
-      throw error;
+      this.handleError('listing files', prefix, error);
     }
   }
 
@@ -200,7 +190,7 @@ export class S3Service {
           const url = new URL(pathOrUrl);
           key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
         } catch (err) {
-          this.logger.warn(`Invalid URL provided, using as key: ${pathOrUrl}`);
+          this.logger.warn(`Invalid URL provided, using as key: ${pathOrUrl}`, err);
         }
       }
 
