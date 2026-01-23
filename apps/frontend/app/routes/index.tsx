@@ -1,12 +1,11 @@
-import { cn } from "app/lib/utils";
-import { CheckIcon } from "lucide-react";
 import { useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
 import { Sidebar } from "../components/runs/sidebar";
 import { MainContent } from "app/components/runs/main-content";
-import { RunItem, RunJson } from "app/types/runs";
+import { RunJson } from "app/types/runs";
 import { getFile } from "app/api/s3";
 import { getRuns } from "app/api/runs";
+import { Run } from "@repo/database";
 import { useQueryClient } from "@tanstack/react-query";
 
 // ---------- Loader ----------
@@ -18,14 +17,14 @@ export const loader = async () => {
 // ---------------------- MAIN PAGE COMPONENT ----------------------
 export default function Runs() {
   const { runs } = useLoaderData<typeof loader>();
-  const [selected, setSelected] = useState<RunItem[]>([]);
+  const [selected, setSelected] = useState<Run[]>([]);
   const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingJson, setLoadingJson] = useState(false);
 
   const isCompareMode = selected.length > 1;
 
   useEffect(() => {
-    const fetchJson = async (run: RunItem) => {
+    const fetchJson = async (run: Run) => {
       setLoadingJson(true);
       try {
         const files = await getFile(run.srcPath);

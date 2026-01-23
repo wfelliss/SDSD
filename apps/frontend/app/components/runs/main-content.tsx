@@ -1,6 +1,14 @@
-import { RunItem, RunJson } from "app/types/runs";
-import { DisplacementSection, HistogramSection } from "app/components/runs/chart-sections";
-import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-elements"; 
+import { RunJson } from "app/types/runs";
+import {
+  DisplacementSection,
+  HistogramSection,
+} from "app/components/runs/chart-sections";
+import {
+  EmptyState,
+  LoadingState,
+  SectionDivider,
+} from "app/components/ui/run-elements"; 
+import { Run } from "@repo/database";
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopUp";
 import { UserIcon } from "lucide-react";
@@ -8,7 +16,7 @@ import { useQueryClient } from "@tanstack/react-query"; // Import this
 import { Profile } from "../profiles/profileRow";
 
 interface MainContentProps {
-  selected: RunItem[];
+  selected: Run[];
   jsonData: Record<number, RunJson>;
   loadingJson: boolean;
   isCompareMode: boolean;
@@ -72,13 +80,18 @@ export function MainContent({
             role="alert"
             className="mb-6 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700"
           >
-            <strong className="block font-medium">Error loading run data</strong>
+            <strong className="block font-medium">
+              Error loading run data
+            </strong>
             <ul className="mt-2 list-disc list-inside">
               {fetchErrors.map((e) => (
                 <li key={e.id}>
                   {e.title ? `${e.title}: ` : `Run ${e.id}: `}
-                      {e.message}
-                      {" Please check the backend server and S3 storage are running and connected."}
+                  {e.message}
+                  {"\n"}
+                  {
+                    " Please check the backend server and S3 storage are running and connected."
+                  }
                 </li>
               ))}
             </ul>
@@ -124,8 +137,6 @@ export function MainContent({
             />
           </>
         )}
-
-
       </div>
     </main>
   );

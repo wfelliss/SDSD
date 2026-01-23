@@ -1,8 +1,24 @@
 import type { MetaFunction } from "react-router";
 import { useLoaderData } from "react-router";
 import { apiClient} from "app/api/client";
-import { ProfileRow } from "../../components/profiles/profileRow";
+import { ProfileRow} from "../../components/profiles/profileRow";
+
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  ClockIcon,
+  EditIcon,
+  LoaderCircleIcon,
+  UserIcon,
+  XIcon,
+} from "lucide-react";
+import { cn, formatDate } from "app/lib/utils";
+import { useState } from "react";
+import { Transition } from "@headlessui/react";
+import { useMutation } from "@tanstack/react-query";
 import { getProfiles } from "app/api/profiles";
+import { Profile } from "@repo/database";
 
 export const meta: MetaFunction = () => {
   return [
@@ -21,7 +37,7 @@ export const loader = async () => {
 };
 
 export default function ProfilesPage() {
-  const { profiles, error } = useLoaderData<typeof loader>();
+  const { profiles} = useLoaderData<typeof loader>();
 
   return (
     <div className="flex flex-col items-center pt-20">

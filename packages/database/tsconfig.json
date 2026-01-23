@@ -1,0 +1,14 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "module": "CommonJS",        
+    "moduleResolution": "Node",
+    "declaration": true,
+    "declarationMap": true,
+    "isolatedDeclarations": false
+  },
+  "include": ["src/**/*"]
+}

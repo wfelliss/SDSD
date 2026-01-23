@@ -20,7 +20,8 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["node", "bun-types", "jest"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
