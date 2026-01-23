@@ -7,8 +7,12 @@ import {
   EmptyState,
   LoadingState,
   SectionDivider,
-} from "app/components/ui/run-elements";
+} from "app/components/ui/run-elements"; 
 import { Run } from "@repo/database";
+import { useState } from "react";
+import { ProfilePopup } from "../profiles/profilePopUp";
+import { UserIcon } from "lucide-react";
+import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
 
 interface MainContentProps {
   selected: Run[];
@@ -18,12 +22,17 @@ interface MainContentProps {
 }
 
 export function MainContent({
-  selected,
+  selected: initialSelected,
   jsonData,
   loadingJson,
   isCompareMode,
 }: MainContentProps) {
-  if (selected.length === 0) {
+  
+  const { runs, handleProfileUpdate } = useOptimisticRuns(initialSelected);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  // 2. NOW you can do conditional returns
+  if (initialSelected.length === 0) {
     return (
       <main className="flex-1 overflow-y-auto p-8 bg-background">
         <EmptyState />
@@ -31,8 +40,7 @@ export function MainContent({
     );
   }
 
-  // Collect any fetch errors for the currently selected runs.
-  const fetchErrors = selected
+  const fetchErrors = runs
     .map((run) => {
       const data = jsonData[run.id];
       if (data && data.error) {
@@ -53,7 +61,6 @@ export function MainContent({
   return (
     <main className="flex-1 overflow-y-auto p-8 bg-background">
       <div className="w-full pb-20">
-        {/* Error banner for any fetch errors */}
         {fetchErrors.length > 0 && (
           <div
             role="alert"
@@ -68,9 +75,7 @@ export function MainContent({
                   {e.title ? `${e.title}: ` : `Run ${e.id}: `}
                   {e.message}
                   {"\n"}
-                  {
-                    " Please check the backend server and S3 storage are running and connected."
-                  }
+                  { " Please check the backend server and S3 storage are running and connected." }
                 </li>
               ))}
             </ul>
@@ -78,16 +83,28 @@ export function MainContent({
         )}
         {fetchErrors.length === 0 && (
           <>
-            <div className="mb-8">
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isCompareMode
-                  ? "Run Comparison"
-                  : selected[0]?.title || "Run Details"}
+            {isPopupOpen && (
+              <ProfilePopup
+                isOpen={isPopupOpen}
+                onClose={() => setIsPopupOpen(false)}
+                selected={runs} 
+                onProfileUpdate={handleProfileUpdate}
+              />
+            )}
+            <div className="w-full flex justify-between mb-8" >
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
+                {isCompareMode ? "Run Comparison" : runs[0]?.title || "Run Details"}
               </h1>
+              <button 
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
+                onClick={() => setIsPopupOpen(true)}
+              >
+                <UserIcon className="size-5" />
+              </button>
             </div>
 
             <DisplacementSection
-              selected={selected}
+              selected={runs}
               jsonData={jsonData}
               isCompareMode={isCompareMode}
             />
@@ -95,7 +112,7 @@ export function MainContent({
             <SectionDivider />
 
             <HistogramSection
-              selected={selected}
+              selected={runs}
               jsonData={jsonData}
               isCompareMode={isCompareMode}
             />
