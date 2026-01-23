@@ -15,6 +15,7 @@ export const loader = async () => {
     const profiles = await getProfiles();
     return { profiles: profiles.data, error: null };
   } catch (error) {
+    console.error("Error loading profiles:", error);
     return { profiles: [], error: "Failed to load profiles." };
   }
 };

@@ -13,8 +13,8 @@ export interface Profile {
   front_max: number;
   back_min: number;
   back_max: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 
@@ -134,8 +134,13 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
               </button>
               <button
                 onClick={() => {
-                  const { id, createdAt, updatedAt, ...editableFields } =
-                    profile;
+                  const editableFields = {
+                        name: profile.name,
+                        front_min: profile.front_min,
+                        front_max: profile.front_max,
+                        back_min: profile.back_min,
+                        back_max: profile.back_max,
+                      };
                   updateProfile(editableFields).then(() => {
                     setEditing(false)
                     if (!onProfileChange) return
