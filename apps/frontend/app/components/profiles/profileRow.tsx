@@ -28,22 +28,29 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
   const [hovering, setHovering] = useState(false);
 
   const [profile, setProfile] = useState(initialProfile);
+  const MAX_TRAVEL = 4096;
 
-  function numberFieldChangeHandler(field: keyof Profile) {
+  function numberFieldChangeHandler(field: 'front_min' | 'front_max' | 'back_min' | 'back_max') {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!e.target.value) return;
+      const rawValue = e.target.value;
+      
 
-      const value = Number(e.target.value);
 
-      if (isNaN(value)) {
-        e.target.value = profile[field].toString();
+      // Allow empty string and treat as 0. Alternatively, handle validation on save.
+      if (rawValue === '') {
+        setProfile((prev) => ({ ...prev, [field]: 0 }));
         return;
       }
 
-      setProfile((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
+      const value = Number(rawValue);
+
+      // Only update state if it's a valid number
+      if (!isNaN(value)) {
+        setProfile((prev) => ({
+          ...prev,
+          [field]: value,
+        }));
+      }
     };
   }
 
@@ -72,7 +79,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
         </div>
         <div className="flex items-center">
           <div className="flex gap-2 text-text-secondary items-center">
-            <p>{formatDate(profile.createdAt)}</p>
+            <p>{formatDate(new Date(profile.createdAt))}</p>
             <ClockIcon className="size-4" />
           </div>
           <div
@@ -111,7 +118,10 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
               className="absolute ml-2 items-center inset-0 size-full flex gap-1"
             >
               <button
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  setEditing(false);
+                  setProfile(initialProfile);
+                }}
                 disabled={isPending}
                 className={cn(
                   "p-1 rounded",
@@ -161,7 +171,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
               <input
                 name="front-min"
                 type="text"
-                defaultValue={profile.front_min}
+                value={profile.front_min}
                 readOnly={!editing}
                 onChange={numberFieldChangeHandler("front_min")}
                 className={cn(
@@ -173,7 +183,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
               <input
                 name="front-max"
                 type="text"
-                defaultValue={profile.front_max}
+                value={profile.front_max}
                 readOnly={!editing}
                 onChange={numberFieldChangeHandler("front_max")}
                 className={cn(
@@ -187,8 +197,8 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
             <div
               className="bg-cyan-700 rounded-full h-full relative"
               style={{
-                width: `${((profile.front_max - profile.front_min) / 4096) * 100}%`,
-                left: `${(profile.front_min / 4096) * 100}%`,
+                width: `${((profile.front_max - profile.front_min) / MAX_TRAVEL) * 100}%`,
+                left: `${(profile.front_min / MAX_TRAVEL) * 100}%`,
               }}
             ></div>
           </div>
@@ -203,7 +213,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
               <input
                 name="back-min"
                 type="text"
-                defaultValue={profile.back_min}
+                value={profile.back_min}
                 readOnly={!editing}
                 onChange={numberFieldChangeHandler("back_min")}
                 className={cn(
@@ -215,7 +225,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
               <input
                 name="back-max"
                 type="text"
-                defaultValue={profile.back_max}
+                value={profile.back_max}
                 readOnly={!editing}
                 onChange={numberFieldChangeHandler("back_max")}
                 className={cn(
@@ -229,8 +239,8 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
             <div
               className="bg-orange-700 rounded-full h-full relative"
               style={{
-                width: `${((profile.back_max - profile.back_min) / 4096) * 100}%`,
-                left: `${(profile.back_min / 4096) * 100}%`,
+                width: `${((profile.back_max - profile.back_min) / MAX_TRAVEL) * 100}%`,
+                left: `${(profile.back_min / MAX_TRAVEL) * 100}%`,
               }}
             ></div>
           </div>

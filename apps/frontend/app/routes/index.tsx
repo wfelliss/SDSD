@@ -6,7 +6,6 @@ import { RunJson } from "app/types/runs";
 import { getFile } from "app/api/s3";
 import { getRuns } from "app/api/runs";
 import { Run } from "@repo/database";
-import { useQueryClient } from "@tanstack/react-query";
 
 // ---------- Loader ----------
 export const loader = async () => {

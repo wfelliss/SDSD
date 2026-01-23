@@ -1,10 +1,10 @@
-import React from 'react';
+import { Run } from '@repo/database';
 import { Profile, ProfileRow } from './profileRow';
 
 interface ProfilePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  selected: any[]; 
+  selected: Run[]; 
   onProfileUpdate?: (updatedProfile: Profile) => void; 
 }
 
