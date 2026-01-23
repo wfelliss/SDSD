@@ -1,278 +1,200 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  S3Client,
-  GetObjectCommand,
-  ListObjectsV2Command,
-  HeadObjectCommand,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Upload } from '@aws-sdk/lib-storage';
-import { PassThrough } from 'stream';
+import { S3Client } from 'bun';
+import { Readable } from 'node:stream';
 
 @Injectable()
 export class S3Service {
   private s3Client: S3Client;
   private readonly logger = new Logger(S3Service.name);
   private readonly bucket: string;
-  private readonly region: string;
 
   constructor(private configService: ConfigService) {
-    this.region = this.configService.get<string>('AWS_REGION', 'us-east-1');
+    const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
+    const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
     this.bucket = this.configService.get<string>('AWS_S3_BUCKET');
 
+    // DEBUG: Ensure Env Vars are loaded correctly
+    this.logger.log(
+      `Debug S3 Config: Region=[${region}] Bucket=[${this.bucket}] AccessKeyLength=[${accessKeyId?.length || 0}]`,
+    );
+
+    if (!accessKeyId || !secretAccessKey || !this.bucket) {
+      this.logger.error('Missing AWS Configuration in environment variables!');
+    }
+
+    // Initialize Bun's native S3 Client
     this.s3Client = new S3Client({
-      region: this.region,
-      credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>(
-          'AWS_SECRET_ACCESS_KEY',
-        ),
-      },
+      accessKeyId,
+      secretAccessKey,
+      bucket: this.bucket,
+      region,
+      // endpoint: '...' // Optional if using MinIO or R2
     });
 
-    this.logger.log(
-      `S3Service initialized with bucket: ${this.bucket} in region: ${this.region}`,
-    );
+    this.logger.log(`S3Service initialized with bucket: ${this.bucket} in region: ${region}`);
   }
 
   /**
-   * Check whether an object exists in the bucket using HeadObject.
+   * Helper to handle and log Bun's AggregateError
+   */
+  private handleError(operation: string, key: string, error: any): never {
+    if (error instanceof AggregateError) {
+      this.logger.error(`AggregateError detected during ${operation} on key: ${key}`);
+      error.errors.forEach((e, index) => {
+        this.logger.error(`Inner Error ${index + 1}: ${e.message}`, e);
+      });
+    } else {
+      this.logger.error(`Error during ${operation} on key: ${key}`, error);
+    }
+    throw error;
+  }
+
+  /**
+   * Check whether an object exists in the bucket.
    */
   async objectExists(key: string): Promise<boolean> {
     try {
-      const command = new HeadObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      });
-
-      await this.s3Client.send(command);
-      return true;
+      const file = this.s3Client.file(key);
+      return await file.exists();
     } catch (err: any) {
-      // If the object is not found, S3 returns a 404; surface other errors
-      const status = err?.$metadata?.httpStatusCode || err?.statusCode;
-      if (status === 404) return false;
-      // Some SDK errors use Code or name
-      if (err?.name === 'NotFound' || err?.Code === 'NotFound') return false;
-      throw err;
+      // If it's a simple 404 or NotFound, return false
+      if (err?.message?.includes('404') || err?.code === 'NotFound') {
+        return false;
+      }
+      // For other errors (connectivity, auth), log details
+      if (err instanceof AggregateError) {
+        this.logger.error(`AggregateError checking existence of ${key}:`);
+        err.errors.forEach((e) => this.logger.error(e));
+        return false; // Assuming connection failure usually means we can't confirm existence
+      }
+      this.logger.error(`Error checking existence of ${key}:`, err);
+      return false;
     }
   }
 
   /**
-   * Get a file from S3 and return its contents as a buffer
+   * Get a file from S3 and return its contents as a buffer.
    */
   async getFile(key: string): Promise<Buffer> {
     try {
-      const command = new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      });
-
-      const response = await this.s3Client.send(command);
-      const chunks: Uint8Array[] = [];
-
-      for await (const chunk of response.Body as any) {
-        chunks.push(chunk);
-      }
-
-      return Buffer.concat(chunks);
+      const file = this.s3Client.file(key);
+      const arrayBuffer = await file.arrayBuffer();
+      return Buffer.from(arrayBuffer);
     } catch (error) {
-      this.logger.error(`Error retrieving file ${key} from S3:`, error);
-      throw error;
+      this.handleError('retrieving file', key, error);
     }
   }
 
   /**
-   * Get a file from S3 and return as JSON
+   * Get a file from S3 and return as JSON.
    */
   async getFileAsJson(key: string): Promise<any> {
     try {
-      const buffer = await this.getFile(key);
-      return JSON.parse(buffer.toString('utf-8'));
+      const file = this.s3Client.file(key);
+      return await file.json();
     } catch (error) {
-      this.logger.error(`Error retrieving JSON file ${key} from S3:`, error);
-      throw error;
+      this.handleError('retrieving JSON file', key, error);
     }
   }
 
   /**
-   * List all files in a specific prefix/folder
-   */
-  async listFiles(prefix: string = ''): Promise<string[]> {
-    try {
-      const command = new ListObjectsV2Command({
-        Bucket: this.bucket,
-        Prefix: prefix,
-      });
-
-      const response = await this.s3Client.send(command);
-      return (response.Contents || []).map((obj) => obj.Key);
-    } catch (error) {
-      this.logger.error(`Error listing files with prefix ${prefix}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload a file to S3
+   * Upload a file to S3.
+   * Bun automatically handles multipart uploads for large files.
    */
   async uploadFile(key: string, data: Buffer | string): Promise<void> {
     try {
-      const body = typeof data === 'string' ? Buffer.from(data) : data;
-
-      // For large buffers use multipart Upload to avoid memory limits and to support large files
-      const MULTIPART_THRESHOLD = 5 * 1024 * 1024; // 5MB
-      if (Buffer.isBuffer(body) && body.length >= MULTIPART_THRESHOLD) {
-        const upload = new Upload({
-          client: this.s3Client,
-          params: {
-            Bucket: this.bucket,
-            Key: key,
-            Body: body,
-          },
-        });
-
-        await upload.done();
-      } else {
-        const command = new PutObjectCommand({
-          Bucket: this.bucket,
-          Key: key,
-          Body: body,
-        });
-
-        await this.s3Client.send(command);
-      }
+      // Bun.write / s3.write automatically handles Buffer, String, or Blob
+      await this.s3Client.write(key, data);
       this.logger.log(`File ${key} uploaded successfully`);
     } catch (error) {
-      this.logger.error(`Error uploading file ${key} to S3:`, error);
-      throw error;
+      this.handleError('uploading file', key, error);
     }
   }
 
   /**
-   * Upload a Buffer (streamed/multipart) to S3 using the higher-level Upload helper.
+   * Upload a Buffer.
    */
   async uploadBuffer(key: string, buffer: Buffer, contentType = 'application/octet-stream') {
     try {
-      const upload = new Upload({
-        client: this.s3Client,
-        params: {
-          Bucket: this.bucket,
-          Key: key,
-          Body: buffer,
-          ContentType: contentType,
-        },
-      });
-
-      await upload.done();
+      // For basic write with Content-Type metadata
+      await this.s3Client.write(key, buffer, { type: contentType });
       this.logger.log(`Buffer uploaded to ${key} successfully`);
     } catch (error) {
-      this.logger.error(`Error uploading buffer ${key} to S3:`, error);
-      throw error;
+      this.handleError('uploading buffer', key, error);
     }
   }
 
   /**
-   * Upload JSON data to S3
+   * Upload JSON data to S3.
    */
   async uploadJson(key: string, data: any): Promise<void> {
     try {
-      const jsonString = JSON.stringify(data, null, 2);
-      // Use PutObjectCommand directly so we can set ContentType for JSON
-      const command = new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: Buffer.from(jsonString),
-        ContentType: 'application/json',
+      await this.s3Client.write(key, JSON.stringify(data, null, 2), {
+        type: 'application/json',
       });
-
-      await this.s3Client.send(command);
     } catch (error) {
-      this.logger.error(`Error uploading JSON file ${key} to S3:`, error);
-      throw error;
+      this.handleError('uploading JSON', key, error);
     }
   }
 
   /**
-   * Delete a file from S3
+   * Delete a file from S3.
    */
   async deleteFile(key: string): Promise<void> {
     try {
-      const command = new DeleteObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      });
-
-      await this.s3Client.send(command);
+      await this.s3Client.file(key).delete();
       this.logger.log(`File ${key} deleted successfully`);
     } catch (error) {
-      this.logger.error(`Error deleting file ${key} from S3:`, error);
-      throw error;
+      this.handleError('deleting file', key, error);
     }
   }
 
   /**
-   * Generate a signed URL for temporary access to a file
+   * Generate a signed URL for temporary access.
    */
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
     try {
-      const command = new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      });
-
-      const url = await getSignedUrl(this.s3Client, command, {
-        expiresIn,
-      });
-
-      return url;
+      const file = this.s3Client.file(key);
+      return await file.presign({ expiresIn });
     } catch (error) {
-      this.logger.error(`Error generating signed URL for ${key}:`, error);
-      throw error;
+      this.handleError('generating signed URL', key, error);
     }
   }
-  async getFileStream(pathOrUrl: string): Promise<{ stream: PassThrough; contentType?: string; contentLength?: number }> {
+
+  /**
+   * Stream handling requires converting Web Streams (Bun) to Node Streams (NestJS).
+   */
+  async getFileStream(
+    pathOrUrl: string,
+  ): Promise<{ stream: Readable; contentType?: string; contentLength?: number }> {
     try {
       let key = pathOrUrl;
-
-      // If a full S3 URL is provided, extract the key
       if (pathOrUrl.startsWith('https://') || pathOrUrl.startsWith('http://')) {
         try {
           const url = new URL(pathOrUrl);
           key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
         } catch (err) {
           this.logger.warn(`Invalid URL provided, using as key: ${pathOrUrl}`);
-          this.logger.warn(err);
         }
       }
 
-      // Get metadata
-      const head = await this.s3Client.send(new HeadObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      }));
+      const file = this.s3Client.file(key);
 
-      // Get object
-      const getObjectResp = await this.s3Client.send(new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      }));
+      // Bun returns a Web Standard ReadableStream
+      const webStream = file.stream();
 
-      const stream = new PassThrough();
-      if (getObjectResp.Body) {
-        (getObjectResp.Body as any).pipe(stream);
-      }
+      // Convert to Node.js Readable for NestJS compatibility
+      const nodeStream = Readable.fromWeb(webStream as any);
 
       return {
-        stream,
-        contentType: head.ContentType,
-        contentLength: head.ContentLength,
+        stream: nodeStream,
+        contentType: file.type,
+        contentLength: file.size,
       };
     } catch (err) {
-      this.logger.error(`Error fetching S3 object from path or URL "${pathOrUrl}":`, err);
-      throw err;
+      this.handleError('fetching S3 stream', pathOrUrl, err);
     }
   }
 }

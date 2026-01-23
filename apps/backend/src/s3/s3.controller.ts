@@ -16,24 +16,6 @@ export class S3Controller {
     private readonly profilesService: ProfilesService,
   ) {}
 
-  @Get('list')
-  async listFiles(@Query('prefix') prefix: string = '') {
-    try {
-      const files = await this.s3Service.listFiles(prefix);
-      return {
-        success: true,
-        prefix,
-        files,
-        count: files.length,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: (error as Error).message,
-      };
-    }
-  }
-
   /**
    * GET /s3/file?path=...
    * Returns the file content from S3
