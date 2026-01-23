@@ -4,6 +4,9 @@ import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopUp";
 import { UserIcon } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query"; // Import this
+import { Profile } from "../profiles/profileRow";
+
 interface MainContentProps {
   selected: RunItem[];
   jsonData: Record<number, RunJson>;
@@ -17,6 +20,8 @@ export function MainContent({
   loadingJson,
   isCompareMode,
 }: MainContentProps) {
+  const queryClient = useQueryClient(); // Initialize Query Client
+  
   if (selected.length === 0) {
     return (
       <main className="flex-1 overflow-y-auto p-8 bg-background">
@@ -28,7 +33,18 @@ export function MainContent({
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [profileTick, setProfileTick] = useState(0);
 
-  // Collect any fetch errors for the currently selected runs.
+  // --- NEW: Handle the update event ---
+  const handleProfileUpdate = (updatedProfile: Profile) => {
+    selected.forEach((run: any) => {
+      if (run.profile && run.profile.id === updatedProfile.id) {
+        Object.assign(run.profile, updatedProfile);
+      }
+    });
+    setProfileTick((t) => t + 1);
+    queryClient.invalidateQueries({ queryKey: ['runs'] });
+  };
+
+  // Collect fetch errors...
   const fetchErrors = selected
     .map((run) => {
       const data = jsonData[run.id];
@@ -73,18 +89,22 @@ export function MainContent({
             {isPopupOpen && (
               <ProfilePopup
                 isOpen={isPopupOpen}
-                onClose={() => {
-                  setIsPopupOpen(false);
-                  setProfileTick((t) => t + 1);
-                }}
+                onClose={() => setIsPopupOpen(false)}
                 selected={selected}
+                // Pass the new handler here
+                onProfileUpdate={handleProfileUpdate}
               />
             )}
             <div className="w-full flex justify-between mb-8" >
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
                 {isCompareMode ? "Run Comparison" : selected[0]?.title || "Run Details"}
               </h1>
-              <button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" onClick={() => setIsPopupOpen(true)}><UserIcon className="size-5" /></button>
+              <button 
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
+                onClick={() => setIsPopupOpen(true)}
+              >
+                <UserIcon className="size-5" />
+              </button>
             </div>
 
             <DisplacementSection
