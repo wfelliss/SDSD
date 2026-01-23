@@ -16,6 +16,21 @@ export class S3Controller {
     private readonly profilesService: ProfilesService,
   ) {}
 
+  @Get('list')
+  async listFiles(@Query('prefix') prefix: string = '') {
+    // No try/catch needed here.
+    // If this fails, BunErrorFilter will catch it and log the real error.
+    const files = await this.s3Service.listFiles(prefix);
+
+    return {
+      success: true,
+      prefix,
+      files,
+      count: files.length,
+    };
+  }
+
+
   /**
    * GET /s3/file?path=...
    * Returns the file content from S3

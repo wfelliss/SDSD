@@ -21,7 +21,9 @@ export class S3Service {
     );
 
     if (!accessKeyId || !secretAccessKey || !this.bucket) {
-      this.logger.error('Missing AWS Configuration in environment variables!');
+      const errorMessage = 'Missing AWS Configuration in environment variables! S3Service cannot be initialized.';
+      this.logger.error(errorMessage);
+      throw new Error(errorMessage);
     }
 
     // Initialize Bun's native S3 Client
@@ -53,24 +55,30 @@ export class S3Service {
 
   /**
    * Check whether an object exists in the bucket.
+   * Returns false ONLY if the file is missing (404).
+   * Throws errors for connectivity, auth, or other failures.
    */
   async objectExists(key: string): Promise<boolean> {
     try {
       const file = this.s3Client.file(key);
       return await file.exists();
     } catch (err: any) {
-      // If it's a simple 404 or NotFound, return false
+      // (Note: Bun's .exists() usually just returns false without throwing, but we keep this safely)
       if (err?.message?.includes('404') || err?.code === 'NotFound') {
         return false;
       }
-      // For other errors (connectivity, auth), log details
+      // 2. Unwrap and Log AggregateErrors (common in Bun S3)
       if (err instanceof AggregateError) {
         this.logger.error(`AggregateError checking existence of ${key}:`);
-        err.errors.forEach((e) => this.logger.error(e));
-        return false; // Assuming connection failure usually means we can't confirm existence
+        err.errors.forEach((e) => this.logger.error(`Inner error: ${e.message}`));
+      } else {
+        // 3. Log standard errors
+        this.logger.error(`Error checking existence of ${key}:`, err);
       }
-      this.logger.error(`Error checking existence of ${key}:`, err);
-      return false;
+
+      // 4. 🚨 CRITICAL CHANGE: Propagate the error.
+      // Do not return false here. The caller must know that the check failed.
+      throw err;
     }
   }
 
@@ -96,6 +104,22 @@ export class S3Service {
       return await file.json();
     } catch (error) {
       this.handleError('retrieving JSON file', key, error);
+    }
+  }
+
+  /**
+   * List all files in a specific prefix/folder
+   */
+  async listFiles(prefix: string = ''): Promise<string[]> {
+    try {
+      // Bun Native S3 List
+      const response = await this.s3Client.list({prefix});
+
+      // Bun returns .contents (lowercase) and each file has a .key (lowercase)
+      return (response.contents ?? []).map((file) => file.key);
+    } catch (error) {
+      this.logger.error(`Error listing files with prefix ${prefix}:`, error);
+      throw error;
     }
   }
 
