@@ -1,5 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
+import { BunErrorFilter } from "./bun-error.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,6 +23,8 @@ async function bootstrap() {
 
   // 2. Bind to 0.0.0.0 for Railway compatibility
   const port = process.env.PORT || 3001;
+
+  app.useGlobalFilters(new BunErrorFilter());
   
   await app.listen(port, "0.0.0.0");
 

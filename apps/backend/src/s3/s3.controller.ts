@@ -18,21 +18,18 @@ export class S3Controller {
 
   @Get('list')
   async listFiles(@Query('prefix') prefix: string = '') {
-    try {
-      const files = await this.s3Service.listFiles(prefix);
-      return {
-        success: true,
-        prefix,
-        files,
-        count: files.length,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: (error as Error).message,
-      };
-    }
+    // No try/catch needed here.
+    // If this fails, BunErrorFilter will catch it and log the real error.
+    const files = await this.s3Service.listFiles(prefix);
+
+    return {
+      success: true,
+      prefix,
+      files,
+      count: files.length,
+    };
   }
+
 
   /**
    * GET /s3/file?path=...

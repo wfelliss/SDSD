@@ -12,10 +12,10 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/database": "*",
     "@headlessui/react": "^2.2.9",
     "@react-router/node": "^7.0.1",
     "@react-router/serve": "7.12.0",
+    "@repo/database": "*",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.16",
