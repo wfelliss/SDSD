@@ -54,7 +54,7 @@ async function seed() {
       comments:
         "Checking system was turning on and off correctly, only measuring shock",
       length: 2184,
-      date: "2025-11-13T18:53:58.985Z",
+      date: "2026-01-13T18:53:58.985Z",
       location: null,
       profile: 1,
       front_freq: 250,
