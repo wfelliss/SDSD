@@ -140,20 +140,22 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
         });
       }
 
-      if (!groups[dateKey]) groups[dateKey] = { dateObj, runs: [] };
-      const group = groups[dateKey]!;
-      if (!group.dateObj && dateObj) group.dateObj = dateObj;
-      group.runs.push(run);
+      if (!groups[dateKey]) {
+        groups[dateKey] = { dateObj, runs: [] };
+      }
+      groups[dateKey]!.runs.push(run);
     });
 
     // Convert to array, sort runs inside each group (newest first), then sort groups by date (newest first). "Undated" goes last.
     const groupedArray = Object.entries(groups).map(([key, entry]) => {
-      entry.runs.sort((a, b) => {
-        const ta = a.date ? new Date(a.date).getTime() : -Infinity;
-        const tb = b.date ? new Date(b.date).getTime() : -Infinity;
-        return tb - ta;
-      });
-      return { dateKey: key, dateObj: entry.dateObj, runs: entry.runs };
+      const sortedRuns = entry.runs
+        .map((run) => ({
+          run,
+          time: run.date ? new Date(run.date).getTime() : -Infinity,
+        }))
+        .sort((a, b) => b.time - a.time)
+        .map(({ run }) => run);
+      return { dateKey: key, dateObj: entry.dateObj, runs: sortedRuns };
     });
 
     groupedArray.sort((a, b) => {
