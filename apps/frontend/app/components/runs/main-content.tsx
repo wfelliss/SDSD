@@ -12,7 +12,12 @@ import { Run } from "@repo/database";
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopUp";
 import { UserIcon } from "lucide-react";
+import { RunsMetadata } from "./runs-metadata";
 import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
+import { CommentsPopup } from "./commentsPopup";
+import { updateRun } from "app/api/runs";
+
+
 
 interface MainContentProps {
   selected: Run[];
@@ -28,8 +33,13 @@ export function MainContent({
   isCompareMode,
 }: MainContentProps) {
   
-  const { runs, handleProfileUpdate } = useOptimisticRuns(initialSelected);
+  const { runs, handleProfileUpdate, handleRunUpdate } = useOptimisticRuns(initialSelected);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  // Comments popup state
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsRun, setCommentsRun] = useState<Run | null>(null);
+
 
   // 2. NOW you can do conditional returns
   if (initialSelected.length === 0) {
@@ -91,6 +101,27 @@ export function MainContent({
                 onProfileUpdate={handleProfileUpdate}
               />
             )}
+
+            {/* Comments popup for run notes */}
+            <CommentsPopup
+              isOpen={Boolean(commentsOpen)}
+              onClose={() => { setCommentsOpen(false); setCommentsRun(null); }}
+              comments={commentsRun?.comments ?? null}
+              title={commentsRun?.title ?? null}
+              runId={commentsRun?.id ?? null}
+              onSave={async (id: number, newComments: string) => {
+                // Persist via API and then update local state
+                try {
+                  await updateRun(id, { comments: newComments });
+                  // update local state on success
+                  handleRunUpdate(id, { comments: newComments });
+                } catch (e) {
+                  console.error("Failed to persist comments", e);
+                  // Optionally, add user-facing error handling here.
+                }
+              }}
+            />
+
             <div className="w-full flex justify-between mb-8" >
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
                 {isCompareMode ? "Run Comparison" : runs[0]?.title || "Run Details"}
@@ -102,6 +133,13 @@ export function MainContent({
                 <UserIcon className="size-5" />
               </button>
             </div>
+
+            {/* Metadata section (extracted to RunsMetadata component) */}
+            <RunsMetadata
+              runs={runs}
+              jsonData={jsonData}
+              onOpenComments={(r) => { setCommentsRun(r); setCommentsOpen(true); }}
+            />
 
             <DisplacementSection
               selected={runs}

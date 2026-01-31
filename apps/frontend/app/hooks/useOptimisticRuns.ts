@@ -43,8 +43,14 @@ export function useOptimisticRuns(initialRuns: Run[]) {
     queryClient.invalidateQueries({ queryKey: ['runs'] });
   }, [queryClient]);
 
+  const handleRunUpdate = useCallback((id: number, updates: Partial<Pick<Run, 'comments' | 'length' | 'location'>>) => {
+    setRuns((prevRuns) => prevRuns.map((run) => (run.id === id ? { ...run, ...updates } : run)));
+    queryClient.invalidateQueries({ queryKey: ['runs'] });
+  }, [queryClient]);
+
   return {
     runs, // Return the "live" state, not the static prop
     handleProfileUpdate,
+    handleRunUpdate,
   };
-}
+} 
