@@ -110,16 +110,15 @@ export function MainContent({
               title={commentsRun?.title ?? null}
               runId={commentsRun?.id ?? null}
               onSave={async (id: number, newComments: string) => {
-                // Persist via API and optimistically update
+                // Persist via API and then update local state
                 try {
-                  // call backend
                   await updateRun(id, { comments: newComments });
+                  // update local state on success
+                  handleRunUpdate(id, { comments: newComments });
                 } catch (e) {
                   console.error("Failed to persist comments", e);
+                  // Optionally, add user-facing error handling here.
                 }
-
-                // update local optimistic state
-                handleRunUpdate(id, { comments: newComments });
               }}
             />
 

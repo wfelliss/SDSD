@@ -61,9 +61,29 @@ export class RunsService {
 
   // Partial update for a run (e.g., update comments)
   async updateRun(id: number, updates: Partial<{ comments: string; length: number; location: string }>) {
+    const { comments, length, location } = updates;
+    
+    // Build update object with only the fields that are actually provided
+    const updateData: Partial<{ comments: string; length: number; location: string }> = {};
+    
+    if (comments !== undefined) {
+      updateData.comments = comments;
+    }
+    if (length !== undefined) {
+      updateData.length = length;
+    }
+    if (location !== undefined) {
+      updateData.location = location;
+    }
+    
+    // If no valid updates provided, return null or throw error
+    if (Object.keys(updateData).length === 0) {
+      return null; // or throw new Error("No valid fields to update");
+    }
+    
     const updated = await this.db
       .update(runs)
-      .set({ ...updates })
+      .set(updateData)
       .where(eq(runs.id, id))
       .returning();
 

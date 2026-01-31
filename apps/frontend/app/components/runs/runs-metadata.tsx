@@ -2,6 +2,7 @@ import { RunJson } from "app/types/runs";
 import { Run } from "@repo/database";
 import { formatDate } from "app/lib/utils";
 import { MessageSquareText } from "lucide-react";
+import { extractFrequencyNumber } from "app/lib/utils";
 
 interface RunsMetadataProps {
   runs: Run[];
@@ -17,22 +18,7 @@ export function RunsMetadata({ runs, jsonData, onOpenComments }: RunsMetadataPro
         const metadata = data.metadata ?? data;
         const sampleFreq = metadata?.sample_frequency ?? null;
 
-        const freqNum = (() => {
-          if (!sampleFreq) return null;
-          if (typeof sampleFreq === "number") return sampleFreq;
-          if (typeof sampleFreq === "string") {
-            const n = Number(sampleFreq);
-            return Number.isFinite(n) ? n : null;
-          }
-          if (typeof sampleFreq === "object") {
-            const vals = Object.values(sampleFreq);
-            for (const v of vals) {
-              const n = typeof v === "number" ? v : Number(v);
-              if (Number.isFinite(n)) return n;
-            }
-          }
-          return null;
-        })();
+        const freqNum = extractFrequencyNumber(sampleFreq);
 
         const freqDisplay = freqNum ? `${freqNum} Hz` : "N/A";
         const lengthSeconds = freqNum && freqNum > 0 ? `${(run.length / freqNum).toFixed(2)} s` : "N/A";
