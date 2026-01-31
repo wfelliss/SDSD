@@ -58,4 +58,15 @@ export class RunsService {
 
     return inserted[0];
   }
-}
+
+  // Partial update for a run (e.g., update comments)
+  async updateRun(id: number, updates: Partial<{ comments: string; length: number; location: string }>) {
+    const updated = await this.db
+      .update(runs)
+      .set({ ...updates })
+      .where(eq(runs.id, id))
+      .returning();
+
+    return updated[0] ?? null;
+  }
+} 

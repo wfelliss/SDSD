@@ -8,3 +8,7 @@ export function getRuns() {
 export function getRunById(id: number) {
   return apiClient.get<Run>(`/runs/${id}`);
 }
+
+export function updateRun(id: number, payload: Partial<Run> | Record<string, any>) {
+  return apiClient.patch(`/runs/${id}`, payload);
+} 

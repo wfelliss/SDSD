@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
 import { RunsService } from './runs.service';
 
 @Controller('runs')
@@ -22,4 +22,10 @@ export class RunsController {
   createRun(@Body() body: any) {
     return this.runsService.createRun(body);
   }
-}
+
+  // Update run fields (partial update)
+  @Patch(':id')
+  updateRun(@Param('id') id: number, @Body() body: any) {
+    return this.runsService.updateRun(Number(id), body);
+  }
+} 
