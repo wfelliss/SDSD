@@ -1,4 +1,4 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, BadRequestException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { runs } from "@repo/database";
@@ -61,29 +61,13 @@ export class RunsService {
 
   // Partial update for a run (e.g., update comments)
   async updateRun(id: number, updates: Partial<{ comments: string; length: number; location: string }>) {
-    const { comments, length, location } = updates;
-    
-    // Build update object with only the fields that are actually provided
-    const updateData: Partial<{ comments: string; length: number; location: string }> = {};
-    
-    if (comments !== undefined) {
-      updateData.comments = comments;
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException("No updates provided for the run.");
     }
-    if (length !== undefined) {
-      updateData.length = length;
-    }
-    if (location !== undefined) {
-      updateData.location = location;
-    }
-    
-    // If no valid updates provided, return null or throw error
-    if (Object.keys(updateData).length === 0) {
-      return null; // or throw new Error("No valid fields to update");
-    }
-    
+
     const updated = await this.db
       .update(runs)
-      .set(updateData)
+      .set(updates)
       .where(eq(runs.id, id))
       .returning();
 

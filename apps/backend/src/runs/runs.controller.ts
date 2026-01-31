@@ -27,6 +27,8 @@ export class RunsController {
 
   // Update run fields (partial update)
   @Patch(':id')
+  // TODO: Add authentication guard when user system is implemented
+  // @UseGuards(AuthGuard('jwt'), RunsOwnerGuard)
   updateRun(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: UpdateRunDto
