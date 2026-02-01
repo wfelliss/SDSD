@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Post, Res, Body, BadRequestException, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { S3Service } from './s3.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { RunsService } from '../runs/runs.service';
@@ -36,21 +36,18 @@ export class S3Controller {
    * Returns the file content from S3
    */
   @Get('file')
-  async getFile(@Query('path') path: string, @Res() res: Response) {
+  async getFile(@Query('path') path: string, @Res({ passthrough: false }) res: Response) {
     if (!path) {
       throw new BadRequestException('Query parameter `path` is required');
     }
     
     try {
-      // s3Service.getFileStream should return a Readable stream from S3
       const { stream, contentType, contentLength } = await this.s3Service.getFileStream(path);
 
-      // set headers
       if (contentType) res.setHeader('Content-Type', contentType);
       if (contentLength) res.setHeader('Content-Length', contentLength);
       res.setHeader('Content-Disposition', `attachment; filename="${path.split('/').pop()}"`);
 
-      // pipe the S3 stream to the response
       stream.pipe(res);
     } catch (err) {
       console.error('Error fetching file from S3:', (err as Error).message);

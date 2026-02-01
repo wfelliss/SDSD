@@ -30,7 +30,13 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build Database Package
+        run: bun run --filter=@repo/database build
+   
       - name: Run Backend Tests
+        run: cd apps/backend && bun test
+
+      - name: Type Check, Lint, and Build
         run: bun run turbo run check-types lint build db:check --filter=backend
 
       - name: Build the database
