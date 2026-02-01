@@ -1,49 +1,73 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { RunsController } from './runs.controller';
+import { RunsService } from './runs.service';
 
 describe('RunsController', () => {
   let controller: RunsController;
-  let mockRunsService: any;
+  let service: jest.Mocked<RunsService>;
 
-  beforeEach(() => {
-    mockRunsService = {
-      getAllRuns: jest.fn(),
-      getRunById: jest.fn(),
-      createRun: jest.fn(),
-      updateRun: jest.fn(),
-    };
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [RunsController],
+      providers: [
+        {
+          provide: RunsService,
+          useValue: {
+            getAllRuns: jest.fn(),
+            getRunById: jest.fn(),
+            createRun: jest.fn(),
+            updateRun: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
 
-    controller = new RunsController(mockRunsService);
+    controller = module.get<RunsController>(RunsController);
+    // Cast to jest.Mocked to get access to .mockResolvedValue and other mock methods
+    service = module.get(RunsService) as jest.Mocked<RunsService>;
   });
 
-  afterEach(() => jest.resetAllMocks());
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
 
   it('getAllRuns delegates to service', async () => {
-    mockRunsService.getAllRuns.mockResolvedValue([{ id: 1 }]);
+    const mockData = [{ id: 1 }] as any;
+    service.getAllRuns.mockResolvedValue(mockData);
+
     const res = await controller.getAllRuns();
-    expect(mockRunsService.getAllRuns).toHaveBeenCalled();
-    expect(res).toEqual([{ id: 1 }]);
+    
+    expect(service.getAllRuns).toHaveBeenCalled();
+    expect(res).toEqual(mockData);
   });
 
   it('getRunById delegates with numeric conversion', async () => {
-    mockRunsService.getRunById.mockResolvedValue({ id: 5 });
+    service.getRunById.mockResolvedValue({ id: 5 } as any);
+
+    // Using '5' (string) because controllers often receive strings from URL params
     const res = await controller.getRunById('5' as any);
-    expect(mockRunsService.getRunById).toHaveBeenCalledWith(5);
+
+    expect(service.getRunById).toHaveBeenCalledWith(5);
     expect(res).toEqual({ id: 5 });
   });
 
   it('createRun forwards body to service', async () => {
     const body = { srcPath: 'x' };
-    mockRunsService.createRun.mockResolvedValue({ id: 1, ...body });
+    service.createRun.mockResolvedValue({ id: 1, ...body } as any);
+
     const res = await controller.createRun(body as any);
-    expect(mockRunsService.createRun).toHaveBeenCalledWith(body);
+
+    expect(service.createRun).toHaveBeenCalledWith(body);
     expect(res).toEqual({ id: 1, ...body });
   });
 
   it('updateRun forwards id and body to service', async () => {
     const body = { comments: 'ok' };
-    mockRunsService.updateRun.mockResolvedValue({ id: 2, comments: 'ok' });
+    service.updateRun.mockResolvedValue({ id: 2, comments: 'ok' } as any);
+
     const res = await controller.updateRun(2 as any, body as any);
-    expect(mockRunsService.updateRun).toHaveBeenCalledWith(2, body);
+
+    expect(service.updateRun).toHaveBeenCalledWith(2, body);
     expect(res).toEqual({ id: 2, comments: 'ok' });
   });
 });

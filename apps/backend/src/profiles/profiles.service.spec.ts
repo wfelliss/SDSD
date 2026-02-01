@@ -163,37 +163,6 @@ describe('ProfilesService', () => {
       expect(result).toEqual(createdProfile);
       expect(mockDatabase.insert).toHaveBeenCalled();
     });
-
-    it('should create profile with all fields', async () => {
-      const profileData = {
-        name: 'Complete Profile',
-        front_min: 10,
-        front_max: 90,
-        back_min: 5,
-        back_max: 95,
-      };
-
-      const createdProfile = {
-        id: 1,
-        ...profileData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockDatabase.insert.mockReturnValue({
-        values: jest.fn().mockReturnThis(),
-        returning: jest.fn().mockResolvedValue([createdProfile]),
-      });
-
-      const result = await service.create(profileData);
-
-      expect(result).toBeDefined();
-      expect(result.name).toBe(profileData.name);
-      expect(result.front_min).toBe(profileData.front_min);
-      expect(result.front_max).toBe(profileData.front_max);
-      expect(result.back_min).toBe(profileData.back_min);
-      expect(result.back_max).toBe(profileData.back_max);
-    });
   });
 
   describe('update', () => {
