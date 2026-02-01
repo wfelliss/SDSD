@@ -31,6 +31,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run Backend Tests
+        run: cd apps/backend && bun test
+
+      - name: Type Check, Lint, and Build
         run: bun run turbo run check-types lint build db:check --filter=backend
 
       - name: Build the database
