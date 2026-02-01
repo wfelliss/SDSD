@@ -45,7 +45,7 @@ describe('ProfilesController', () => {
       ];
       mockProfilesService.findAll.mockResolvedValue(result);
 
-      expect(await controller.findAll()).toBe(result);
+      expect(await controller.findAll()).toEqual(result);
       expect(mockProfilesService.findAll).toHaveBeenCalled();
     });
   });
