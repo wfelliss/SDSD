@@ -4,7 +4,6 @@ import { ProfilesService } from './profiles.service';
 
 describe('ProfilesController', () => {
   let controller: ProfilesController;
-  let service: ProfilesService;
 
   const mockProfilesService = {
     findAll: jest.fn(),
@@ -26,7 +25,6 @@ describe('ProfilesController', () => {
     }).compile();
 
     controller = module.get<ProfilesController>(ProfilesController);
-    service = module.get<ProfilesService>(ProfilesService);
   });
 
   afterEach(() => {
