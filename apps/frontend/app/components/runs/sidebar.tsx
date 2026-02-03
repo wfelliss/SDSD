@@ -123,23 +123,49 @@ interface SidebarProps {
 export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  // Group runs by date
+  // Group runs by date and return a sorted array of groups (newest first).
   const groupedRuns = useMemo(() => {
-    const groups: Record<string, typeof runs> = {};
-    runs.forEach(run => {
+    const groups: Record<string, { dateObj: Date | null; runs: Run[] }> = {};
+
+    runs.forEach((run) => {
       let dateKey = "Undated";
+      let dateObj: Date | null = null;
       if (run.date) {
-        dateKey = new Date(run.date).toLocaleDateString("en-US", {
+        dateObj = new Date(run.date);
+        dateKey = dateObj.toLocaleDateString("en-US", {
           weekday: "short",
           month: "short",
           day: "numeric",
           year: "numeric",
         });
       }
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey]?.push(run);
+
+      if (!groups[dateKey]) {
+        groups[dateKey] = { dateObj, runs: [] };
+      }
+      groups[dateKey]!.runs.push(run);
     });
-    return groups;
+
+    // Convert to array, sort runs inside each group (newest first), then sort groups by date (newest first). "Undated" goes last.
+    const groupedArray = Object.entries(groups).map(([key, entry]) => {
+      const sortedRuns = entry.runs
+        .map((run) => ({
+          run,
+          time: run.date ? new Date(run.date).getTime() : -Infinity,
+        }))
+        .sort((a, b) => b.time - a.time)
+        .map(({ run }) => run);
+      return { dateKey: key, dateObj: entry.dateObj, runs: sortedRuns };
+    });
+
+    groupedArray.sort((a, b) => {
+      if (a.dateObj && b.dateObj) return b.dateObj.getTime() - a.dateObj.getTime();
+      if (a.dateObj) return -1; // a has date, b is undated -> a before b
+      if (b.dateObj) return 1; // b has date, a is undated -> b before a
+      return 0;
+    });
+
+    return groupedArray;
   }, [runs]);
 
   return (
@@ -175,21 +201,15 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
                       No runs available - go ride your bike
                     </li>
                   ) : (
-                    Object.keys(groupedRuns)
-                      .reverse()
-                      .map((date) => {
-                        const groupRuns = groupedRuns[date];
-                        if (!groupRuns) return null;
-                        return (
-                          <DateGroup
-                            key={date}
-                            date={date}
-                            runs={groupRuns}
-                            selected={selected}
-                            setSelected={setSelected}
-                          />
-                        );
-                      })
+                    groupedRuns.map((group) => (
+                      <DateGroup
+                        key={group.dateKey}
+                        date={group.dateKey}
+                        runs={group.runs}
+                        selected={selected}
+                        setSelected={setSelected}
+                      />
+                    ))
                   )}
                 </ul>
               </div>

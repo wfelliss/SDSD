@@ -26,3 +26,26 @@ export function formatDate(date: Date): string {
     day: "2-digit",
   });
 }
+
+export function extractFrequencyNumber(sampleFreq: unknown): number | null {
+  if (!sampleFreq) return null;
+  
+  if (typeof sampleFreq === "number") {
+    return Number.isFinite(sampleFreq) ? sampleFreq : null;
+  }
+  
+  if (typeof sampleFreq === "string") {
+    const n = Number(sampleFreq);
+    return Number.isFinite(n) ? n : null;
+  }
+  
+  if (typeof sampleFreq === "object") {
+    const vals = Object.values(sampleFreq);
+    for (const v of vals) {
+      const n = typeof v === "number" ? v : Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  
+  return null;
+}

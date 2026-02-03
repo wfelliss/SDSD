@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import { profiles, runs, users } from "../src/schema";
 
@@ -22,18 +23,26 @@ async function seed() {
   ];
 
   for (const profileItem of initialProfiles) {
-    await db
-      .insert(profiles)
-      .values({
+    // 1. Check if it exists manually
+    const [existingProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.name, profileItem.name))
+      .limit(1);
+
+    // 2. Only insert if it was NOT found
+    if (!existingProfile) {
+      await db.insert(profiles).values({
         name: profileItem.name,
         front_min: profileItem.front_min,
         front_max: profileItem.front_max,
         back_min: profileItem.back_min,
         back_max: profileItem.back_max,
-      })
-      .onConflictDoNothing(); // ← ignores duplicates automatically
-
-    console.log(`✅ Processed profile: ${profileItem.name}`);
+      });
+      console.log(`✅ Created: ${profileItem.name}`);
+    } else {
+      console.log(`⚠️ Skipped (Already exists): ${profileItem.name}`);
+    }
   }
 
   // Insert some test users
@@ -45,7 +54,7 @@ async function seed() {
       comments:
         "Checking system was turning on and off correctly, only measuring shock",
       length: 2184,
-      date: "2025-11-13T18:53:58.985Z",
+      date: "2026-01-13T18:53:58.985Z",
       location: null,
       profile: 1,
       front_freq: 250,

@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
 import { RunsService } from './runs.service';
+import { ParseIntPipe } from '@nestjs/common';
+import { UpdateRunDto } from './dto/update-run.dto';
 
 @Controller('runs')
 export class RunsController {
@@ -22,4 +24,15 @@ export class RunsController {
   createRun(@Body() body: any) {
     return this.runsService.createRun(body);
   }
-}
+
+  // Update run fields (partial update)
+  @Patch(':id')
+  // TODO: Add authentication guard when user system is implemented
+  // @UseGuards(AuthGuard('jwt'), RunsOwnerGuard)
+  updateRun(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateRunDto
+  ) {
+    return this.runsService.updateRun(id, body);
+  }
+} 

@@ -15,7 +15,10 @@ export default function Layout() {
         {/* Added 'pointer-events-auto' so the buttons are still clickable */}
         <div className="bg-card-background-primary p-1 rounded-md shadow text-text-secondary flex flex-row gap-1 pointer-events-auto rounded">
           {nav.map(item => 
-            <Link to={item.href} className="p-2 rounded-sm transition-colors hover:bg-page-background-primary hover:inset-shadow-sm">
+            <Link 
+            key={item.href} 
+            to={item.href} 
+            className="p-2 rounded-sm transition-colors hover:bg-page-background-primary hover:inset-shadow-sm">
               <item.icon className="size-5" />
             </Link>
           )}

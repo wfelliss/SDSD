@@ -1,4 +1,4 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, BadRequestException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../database/database.module";
 import { runs } from "@repo/database";
@@ -58,4 +58,19 @@ export class RunsService {
 
     return inserted[0];
   }
-}
+
+  // Partial update for a run (e.g., update comments)
+  async updateRun(id: number, updates: Partial<{ comments: string; length: number; location: string }>) {
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException("No updates provided for the run.");
+    }
+
+    const updated = await this.db
+      .update(runs)
+      .set(updates)
+      .where(eq(runs.id, id))
+      .returning();
+
+    return updated[0] ?? null;
+  }
+} 
