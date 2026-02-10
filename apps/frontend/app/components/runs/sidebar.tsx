@@ -130,9 +130,10 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
     const q = query.toLowerCase();
   
     return runs.filter((run) =>
+      selected.some((r) => r.id === run.id) ||
       (run.title ?? "").toLowerCase().includes(q)
     );
-  }, [runs, query]);
+  }, [runs, query,selected]);
   // Group runs by date and return a sorted array of groups (newest first).
   const groupedRuns = useMemo(() => {
     const groups: Record<string, { dateObj: Date | null; runs: Run[] }> = {};
