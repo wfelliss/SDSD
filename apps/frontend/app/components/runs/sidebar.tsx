@@ -131,7 +131,8 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
   
     return runs.filter((run) =>
       selected.some((r) => r.id === run.id) ||
-      (run.title ?? "").toLowerCase().includes(q)
+      (run.title ?? "").toLowerCase().includes(q) ||
+      (run.location ?? "").toLowerCase().includes(q)
     );
   }, [runs, query,selected]);
   // Group runs by date and return a sorted array of groups (newest first).
@@ -203,15 +204,15 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
                 <h1 className="font-semibold text-xl text-slate-700 whitespace-nowrap">Select runs to compare</h1>
                 <h2 className="text-sm text-slate-500 whitespace-nowrap">You can compare up to 2 runs</h2>
               </div>
-        <div className =" px-5 pb-4 focus:outline-none focus:ring-0">
-        <input
-          type="search"
-          placeholder="Search runs…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="px-3 py-2 rounded border"
-          />
-          </div>
+              <div className="px-5 pb-4 focus:outline-none focus:ring-0">
+                <input
+                  type="search"
+                  placeholder="Search runs…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full px-3 py-2 rounded border"
+                />
+              </div>
 
 
               {/* Scrollable runs list */}
