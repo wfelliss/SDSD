@@ -122,12 +122,22 @@ interface SidebarProps {
 
 export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [query, setQuery] = useState("");
 
+  const filteredRuns = useMemo(() => {
+    if (!query.trim()) return runs;
+  
+    const q = query.toLowerCase();
+  
+    return runs.filter((run) =>
+      (run.title ?? "").toLowerCase().includes(q)
+    );
+  }, [runs, query]);
   // Group runs by date and return a sorted array of groups (newest first).
   const groupedRuns = useMemo(() => {
     const groups: Record<string, { dateObj: Date | null; runs: Run[] }> = {};
 
-    runs.forEach((run) => {
+    filteredRuns.forEach((run) => {
       let dateKey = "Undated";
       let dateObj: Date | null = null;
       if (run.date) {
@@ -166,7 +176,7 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
     });
 
     return groupedArray;
-  }, [runs]);
+  }, [filteredRuns]);
 
   return (
     <>
@@ -192,8 +202,19 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
                 <h1 className="font-semibold text-xl text-slate-700 whitespace-nowrap">Select runs to compare</h1>
                 <h2 className="text-sm text-slate-500 whitespace-nowrap">You can compare up to 2 runs</h2>
               </div>
+        <div className =" px-5 pb-4 focus:outline-none focus:ring-0">
+        <input
+          type="search"
+          placeholder="Search runs…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="px-3 py-2 rounded border"
+          />
+          </div>
+
 
               {/* Scrollable runs list */}
+
               <div className="flex-1 overflow-y-auto px-4 pb-16 scrollbar-hide">
                 <ul className="flex flex-col gap-2 w-full">
                   {runs.length === 0 ? (
