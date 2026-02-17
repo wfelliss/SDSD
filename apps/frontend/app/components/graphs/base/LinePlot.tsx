@@ -121,7 +121,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .join("g")
       .attr("class", "x-axis axis text-muted-foreground text-xs")
       .attr("transform", `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(x) as d3.Axis<number>)
+      .call(d3.axisBottom(x) as d3.Axis<number>);
 
     // Focus Y Axis
     focus.selectAll<SVGGElement, null>(".y-axis")

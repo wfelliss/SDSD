@@ -1,5 +1,7 @@
+// ignore these utils on merge with main - this is old template system
 export const MAX_TRAVEL = 4096; // replace with rider max travel data 
-const WINDOWMS = 500 // histogram window length - usually 100ms to 300ms window
+const WINDOWMS = 600 // histogram window length - usually 100ms to 300ms
+const TEMP_MAX = 1000;
 
 export type RawSuspensionData = number | { displacement: number; timebase?: number };
 
@@ -12,8 +14,19 @@ export interface NormalizedPoint {
   y: number; 
 }
 
-export function normalizeToPercentage(val: number): number {
-  return 100 - (val / MAX_TRAVEL) * 100;
+
+export function normalizeToPercentage(val: number, min?: number, max?: number): number {
+  // If caller provides a valid min/max range, use it; otherwise fall back to 0..MAX_TRAVEL
+  const hasValidRange = typeof min === 'number' && typeof max === 'number' && isFinite(min) && isFinite(max) && max > min;
+
+  if (!hasValidRange) {
+    const result = 100 - (val / MAX_TRAVEL) * 100;
+    return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
+  }
+
+  const pct = (val - (min as number)) / ((max as number) - (min as number));
+  const result = 100 - pct * 100;
+  return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
 }
 
 export function standardizeData(dataArr: RawSuspensionData[], freq: number): StandardizedPoint[] {

@@ -1,20 +1,19 @@
 import React, { useMemo } from 'react';
 import { Histogram } from "../base/Histogram";
-import { processHistogramData } from "../../../lib/telemetryUtils";
+import { RawSuspensionData, processHistogramData } from "../../../lib/telemetryUtils";
 
 interface TravelHistogramProps {
-  rawData: any[];
+  rawData: RawSuspensionData[];
   title?: string;
-  colorClass?: string;
-  hoverColorClass?: string;
+  fillColor?: string;
   height?: number;
 }
 
+// Renders a histogram of suspension travel (displacement) values.
 export const TravelHistogram: React.FC<TravelHistogramProps> = ({ 
   rawData,
   title = "Suspension Travel",
-  colorClass = "fill-blue-500",
-  hoverColorClass = "fill-blue-700",
+  fillColor = "hsl(var(--chart-1))",
   height = 160
 }) => {
   
@@ -24,7 +23,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
   }, [rawData]);
 
   if (histData.length === 0) {
-    return <div className="h-40 flex items-center justify-center text-r text-sm">No data</div>;
+    return <div className="h-40 flex items-center justify-center text-gray-500 text-sm">No data</div>;
   }
 
   return (
@@ -33,8 +32,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
         data={histData} 
         xDomain={[0, 100]}
         height={height} 
-        colorClass={colorClass} 
-        hoverColorClass={hoverColorClass} 
+        fillColor={fillColor}
         title={title}        
       />
     </div>

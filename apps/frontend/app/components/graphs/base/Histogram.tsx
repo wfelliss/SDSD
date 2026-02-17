@@ -12,9 +12,9 @@ export interface HistogramProps {
   height?: number;
   xDomain?: [number, number];
   className?: string;
-  colorClass?: string;
-  hoverColorClass?: string;
+  fillColor?: string;
   title?: string;
+  binCount?: number;
 }
 
 export const Histogram: React.FC<HistogramProps> = ({ 
@@ -22,9 +22,9 @@ export const Histogram: React.FC<HistogramProps> = ({
   height = 500, 
   xDomain,
   className = "",
-  colorClass = "fill-blue-500", 
-  hoverColorClass = "fill-blue-600",
-  title
+  fillColor = "hsl(var(--chart-1))",
+  title,
+  binCount = 20
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -49,11 +49,11 @@ export const Histogram: React.FC<HistogramProps> = ({
 
     // Bin the data
     const bins = d3.bin()
-      .thresholds(20)
+      .thresholds(binCount)
       .domain(xDomain || (d3.extent(data) as [number, number]))
       (data);
 
-    // Data present check
+    // Guard against empty or single-bin data
     if (bins.length === 0) return;
     const firstBin = bins[0]!;
     const lastBin = bins[bins.length - 1]!;
@@ -63,8 +63,9 @@ export const Histogram: React.FC<HistogramProps> = ({
       .domain([firstBin.x0!, lastBin.x1!])
       .range([marginLeft, width - marginRight]);
 
+    const maxBinLength = d3.max(bins, d => d.length) ?? 1;
     const y = d3.scaleLinear()
-      .domain([0, d3.max(bins, d => d.length)!])
+      .domain([0, maxBinLength])
       .range([height - marginBottom, marginTop]);
 
     // Clear and create SVG
@@ -87,20 +88,22 @@ export const Histogram: React.FC<HistogramProps> = ({
         .attr("y", d => y(d.length))
         .attr("height", d => y(0) - y(d.length))
         .attr("rx", 2)
-        .attr("class", `cursor-pointer ${colorClass}`)
+        .attr("fill", fillColor)
+        .attr("class", "cursor-pointer transition-opacity hover:opacity-80")
         .on("mouseenter", function(_, d) {
-          d3.select(this).attr("class", `cursor-pointer ${hoverColorClass}`);
+          d3.select(this).attr("opacity", 0.8);
           const pct = ((d.length / data.length) * 100).toFixed(1);
+          const range = `${(d.x0 ?? 0).toFixed(1)} - ${(d.x1 ?? 0).toFixed(1)}`;
           tooltip.style("opacity", 1)
             .html(`<div class="font-bold text-gray-900">${pct}%</div>
-                   <div class="text-xs text-gray-500">Range: ${d.x0} - ${d.x1}</div>`);
+                   <div class="text-xs text-gray-500">Range: ${range}</div>`);
         })
         .on("mousemove", (event) => {
           const [xPos, yPos] = d3.pointer(event, containerRef.current);
           tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
         })
         .on("mouseleave", function() {
-          d3.select(this).attr("class", `cursor-pointer ${colorClass}`);
+          d3.select(this).attr("opacity", 1);
           tooltip.style("opacity", 0);
         });
 
@@ -112,8 +115,7 @@ export const Histogram: React.FC<HistogramProps> = ({
       .call(g => g.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
 
     // Add y-axis
-    const yMax = d3.max(bins, d => d.length) || 0;
-    const yTickFormat = yMax < 10 ? d3.format("d") : d3.format("~s");
+    const yTickFormat = maxBinLength < 10 ? d3.format("d") : d3.format("~s");
     
     svg.append("g")
       .attr("transform", `translate(${marginLeft},0)`)
@@ -121,7 +123,7 @@ export const Histogram: React.FC<HistogramProps> = ({
       .call(g => g.selectAll(".domain, .tick line").attr("class", "stroke-border"))
       .call(g => g.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
 
-  }, [data, width, height, colorClass, hoverColorClass, xDomain]); 
+  }, [data, width, height, fillColor, xDomain, binCount]); 
 
   return (
     <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative w-full ${className}`} ref={containerRef}>
