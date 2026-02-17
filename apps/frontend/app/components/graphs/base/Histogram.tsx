@@ -48,9 +48,11 @@ export const Histogram: React.FC<HistogramProps> = ({
     const marginTop = 20, marginRight = 20, marginBottom = 40, marginLeft = 40;
 
     // Bin the data
+    const domain = xDomain ?? d3.extent(data);
+    if (domain[0] === undefined || domain[1] === undefined) return;
     const bins = d3.bin()
       .thresholds(binCount)
-      .domain(xDomain || (d3.extent(data) as [number, number]))
+      .domain(domain)
       (data);
 
     // Guard against empty or single-bin data
