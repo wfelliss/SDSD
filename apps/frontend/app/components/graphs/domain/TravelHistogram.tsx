@@ -7,19 +7,36 @@ interface TravelHistogramProps {
   title?: string;
   fillColor?: string;
   height?: number;
+  min?: number;
+  max?: number;
 }
 
 // Renders a histogram of suspension travel (displacement) values.
 export const TravelHistogram: React.FC<TravelHistogramProps> = ({ 
   rawData,
   title = "Suspension Travel",
-  fillColor = "hsl(var(--chart-1))",
+  colorClass = "fill-blue-500",
+  hoverColorClass = "fill-blue-700",
   height = 160
 }) => {
   
-  // use telemetry utility
-  const histData = useMemo(() => {
-    return processHistogramData(rawData);
+  // Normalize raw data and bin it
+  const bins = useMemo(() => {
+    const normalized = processHistogramData(rawData);
+    if (normalized.length === 0) return [];
+    
+    const binGenerator = d3.bin()
+      .domain([0, 100])
+      .thresholds(20);
+    
+    const binnedData = binGenerator(normalized);
+    const totalCount = normalized.length;
+    
+    return binnedData.map(d => ({
+      x0: d.x0 ?? 0,
+      x1: d.x1 ?? 0,
+      percent: Math.round(d.length / totalCount * 100)
+    })) as HistogramBin[];
   }, [rawData]);
 
   if (histData.length === 0) {

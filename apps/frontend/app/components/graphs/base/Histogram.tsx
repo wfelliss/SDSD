@@ -45,39 +45,39 @@ export const Histogram: React.FC<HistogramProps> = ({
   useEffect(() => {
     if (!data?.length || width === 0 || !containerRef.current) return;
 
-    const marginTop = 20, marginRight = 20, marginBottom = 40, marginLeft = 40;
+    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
 
-    // Bin the data
-    const domain = xDomain ?? d3.extent(data);
-    if (domain[0] === undefined || domain[1] === undefined) return;
-    const bins = d3.bin()
-      .thresholds(binCount)
-      .domain(domain)
-      (data);
+    // --- INITIALIZATION ---
+    if (!d3Ref.current.initialized) {
+        d3.select(containerRef.current).selectAll("svg").remove();
 
-    // Guard against empty or single-bin data
-    if (bins.length === 0) return;
-    const firstBin = bins[0]!;
-    const lastBin = bins[bins.length - 1]!;
+        const svg = d3.select(containerRef.current)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("class", "overflow-visible");
+        
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Create scales
-    const x = d3.scaleLinear()
-      .domain([firstBin.x0!, lastBin.x1!])
-      .range([marginLeft, width - marginRight]);
+        const xAxisGroup = g.append("g").attr("class", "x-axis");
+        const yAxisGroup = g.append("g").attr("class", "y-axis");
+        
+        d3Ref.current = { 
+            initialized: true, 
+            svg, 
+            g, 
+            xAxisGroup, 
+            yAxisGroup,
+            x: d3.scaleLinear(), 
+            y: d3.scaleLinear()
+        };
+    }
 
-    const maxBinLength = d3.max(bins, d => d.length) ?? 1;
-    const y = d3.scaleLinear()
-      .domain([0, maxBinLength])
-      .range([height - marginBottom, marginTop]);
-
-    // Clear and create SVG
-    d3.select(containerRef.current).selectAll("svg").remove();
-    
-    const svg = d3.select(containerRef.current)
-      .append("svg")
-      .attr("viewBox", [0, 0, width, height])
-      .attr("style", "max-width: 100%; height: auto;");
-
+    // --- UPDATES ---
+    const { svg, g, xAxisGroup, yAxisGroup, x, y } = d3Ref.current;
     const tooltip = d3.select(tooltipRef.current);
 
     // Add bars

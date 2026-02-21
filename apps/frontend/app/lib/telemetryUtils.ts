@@ -14,7 +14,6 @@ export interface NormalizedPoint {
   y: number; 
 }
 
-
 export function normalizeToPercentage(val: number, min?: number, max?: number): number {
   // If caller provides a valid min/max range, use it; otherwise fall back to 0..MAX_TRAVEL
   const hasValidRange = typeof min === 'number' && typeof max === 'number' && isFinite(min) && isFinite(max) && max > min;
@@ -51,17 +50,17 @@ export function standardizeData(dataArr: RawSuspensionData[], freq: number): Sta
 
 
 // DisplacementPlot - Standardizes raw suspension data and maps it into normalized time-series points.
-export function processLinePlotData(dataArr: RawSuspensionData[], freq: number): NormalizedPoint[] {
+export function processLinePlotData(dataArr: RawSuspensionData[], freq: number, min?: number, max?: number): NormalizedPoint[] {
   const cleanData = standardizeData(dataArr, freq);
-  
+
   return cleanData.map(point => ({
     x: point.time,
-    y: normalizeToPercentage(point.val)
+    y: normalizeToPercentage(point.val, min, max)
   }));
 }
 
 // TravelHistogram - Normalise displacement values for histogram distribution
-export const processHistogramData = (dataArr: RawSuspensionData[]): number[] => {
+export const processHistogramData = (dataArr: RawSuspensionData[], min?: number, max?: number): number[] => {
   if (!Array.isArray(dataArr)) return [];
 
   return dataArr.map(p => {
@@ -71,7 +70,7 @@ export const processHistogramData = (dataArr: RawSuspensionData[]): number[] => 
     } else {
       val = Number(p.displacement ?? 0);
     }
-    return normalizeToPercentage(val);
+    return normalizeToPercentage(val, min, max);
   }).filter(v => !isNaN(v) && isFinite(v));
 };
 

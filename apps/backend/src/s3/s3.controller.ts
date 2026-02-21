@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Post, Res, Body, BadRequestException, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { S3Service } from './s3.service';
+import { ProfilesService } from '../profiles/profiles.service';
 import { RunsService } from '../runs/runs.service';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -12,46 +13,41 @@ export class S3Controller {
     private readonly s3Service: S3Service,
     private readonly runsService: RunsService,
     private readonly configService: ConfigService,
+    private readonly profilesService: ProfilesService,
   ) {}
 
   @Get('list')
   async listFiles(@Query('prefix') prefix: string = '') {
-    try {
-      const files = await this.s3Service.listFiles(prefix);
-      return {
-        success: true,
-        prefix,
-        files,
-        count: files.length,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: (error as Error).message,
-      };
-    }
+    // No try/catch needed here.
+    // If this fails, BunErrorFilter will catch it and log the real error.
+    const files = await this.s3Service.listFiles(prefix);
+
+    return {
+      success: true,
+      prefix,
+      files,
+      count: files.length,
+    };
   }
+
 
   /**
    * GET /s3/file?path=...
    * Returns the file content from S3
    */
   @Get('file')
-  async getFile(@Query('path') path: string, @Res() res: Response) {
+  async getFile(@Query('path') path: string, @Res({ passthrough: false }) res: Response) {
     if (!path) {
       throw new BadRequestException('Query parameter `path` is required');
     }
     
     try {
-      // s3Service.getFileStream should return a Readable stream from S3
       const { stream, contentType, contentLength } = await this.s3Service.getFileStream(path);
 
-      // set headers
       if (contentType) res.setHeader('Content-Type', contentType);
       if (contentLength) res.setHeader('Content-Length', contentLength);
       res.setHeader('Content-Disposition', `attachment; filename="${path.split('/').pop()}"`);
 
-      // pipe the S3 stream to the response
       stream.pipe(res);
     } catch (err) {
       console.error('Error fetching file from S3:', (err as Error).message);
@@ -64,30 +60,30 @@ export class S3Controller {
    * Ensure the provided key does not already exist in the bucket. If it does,
    * append a numeric suffix before the extension (or at end) to make it unique.
    */
-  private async ensureUniqueKey(originalKey: string): Promise<string> {
+private async ensureUniqueKey(originalKey: string): Promise<string> {
     let candidate = originalKey;
     let i = 1;
+    
     while (true) {
-      try {
+        // Fix: Removed try/catch. If objectExists fails, it will throw automatically.
         const exists = await this.s3Service.objectExists(candidate);
-        if (!exists) return candidate;
-      } catch (err) {
-        // If objectExists threw due to other errors, rethrow
-        throw err;
-      }
+        
+        if (!exists) {
+            return candidate;
+        }
 
-      // build next candidate with suffix
-      const extIndex = originalKey.lastIndexOf('.');
-      if (extIndex > 0) {
-        const base = originalKey.slice(0, extIndex);
-        const ext = originalKey.slice(extIndex);
-        candidate = `${base}-${i}${ext}`;
-      } else {
-        candidate = `${originalKey}-${i}`;
-      }
-      i += 1;
+        // build next candidate with suffix
+        const extIndex = originalKey.lastIndexOf('.');
+        if (extIndex > 0) {
+            const base = originalKey.slice(0, extIndex);
+            const ext = originalKey.slice(extIndex);
+            candidate = `${base}-${i}${ext}`;
+        } else {
+            candidate = `${originalKey}-${i}`;
+        }
+        i += 1;
     }
-  }
+}
 
   private parseCsvToColumnArrays(csv: string) {
     const rows = csv.trim().split('\n').map(r => r.split(','));
@@ -115,6 +111,23 @@ export class S3Controller {
     return columns;
   }
 
+  private getStartingValues(csv: string): [number, number] {
+    const rows = csv.trim().split('\n').map(r => r.split(','));
+    if (rows.length < 2) return [0, 0];
+    const frontStart = parseInt(rows[1][6], 10);
+    const rearStart = parseInt(rows[1][7], 10);
+    return [frontStart, rearStart];
+  }
+  private findMax(startValue, suspensionStroke, potentiometerStroke): number {
+    const adcPerMm = 4096 / potentiometerStroke;
+
+    // Calculate expected end value
+    const endValue = startValue + suspensionStroke * adcPerMm;
+
+    // Clamp to valid ADC range
+    return Math.min(4096, Math.max(0, Math.round(endValue)));
+  }
+  
   /**
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
@@ -141,6 +154,9 @@ export class S3Controller {
     }
     // Convert new csv into json format
     const csvContent = file.buffer.toString('utf-8');
+    const [frontStart, rearStart] = this.getStartingValues(csvContent);
+    const front_max = this.findMax(frontStart, metadata?.front_stroke, 230);
+    const back_max = this.findMax(rearStart, metadata?.rear_stroke, 80);
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
     // build json file
@@ -202,8 +218,18 @@ export class S3Controller {
       const lengthVal = Math.max(...columns.map(col => col.length)) || 0;
 
       // Use the filename (last segment of the key) as the run title
-      const title = (key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
+      const title = decodeURIComponent(key.split('/').pop() ?? key).replace(/\.[^.]+$/, '');
 
+      const profileData = {
+        name: title+"_profile",
+        front_min: frontStart,
+        back_min: rearStart,
+        front_max: front_max,
+        back_max: back_max,
+      }
+      console.log('💾 Creating profile record with data:', JSON.stringify(profileData, null, 2));
+      const profile = await this.profilesService.create(profileData);
+      console.log('💾 Created profile record:', profile);
 
       const runData = {
         srcPath: s3Url,
@@ -214,6 +240,7 @@ export class S3Controller {
         location: metadata?.location ?? null,
         front_freq: metadata?.front_freq ?? 100, // 100 is the default freq on esp
         rear_freq: metadata?.rear_freq ?? 100,
+        profile: profile.id
       };
 
       console.log('💾 Creating database record with data:', JSON.stringify(runData, null, 2));
@@ -260,4 +287,4 @@ export class S3Controller {
   }
 
   // `newRun` JSON endpoint removed; `newRunFile` handles uploads now.
-}``
+}

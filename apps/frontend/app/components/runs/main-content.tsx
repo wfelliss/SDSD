@@ -1,21 +1,48 @@
-import { RunItem, RunJson } from "app/types/runs";
-import { DisplacementSection, HistogramSection } from "app/components/runs/chart-sections";
-import { EmptyState, LoadingState, SectionDivider } from "app/components/ui/run-elements";
+import { RunJson } from "app/types/runs";
+import {
+  DisplacementSection,
+  HistogramSection,
+} from "app/components/runs/chart-sections";
+import {
+  EmptyState,
+  LoadingState,
+  SectionDivider,
+} from "app/components/ui/run-elements"; 
+import { Run } from "@repo/database";
+import { useState } from "react";
+import { ProfilePopup } from "../profiles/profilePopUp";
+import { UserIcon } from "lucide-react";
+import { RunsMetadata } from "./runs-metadata";
+import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
+import { CommentsPopup } from "./commentsPopup";
+import { updateRun } from "app/api/runs";
+
+
 
 interface MainContentProps {
-  selected: RunItem[];
+  selected: Run[];
   jsonData: Record<number, RunJson>;
   loadingJson: boolean;
   isCompareMode: boolean;
 }
 
 export function MainContent({
-  selected,
+  selected: initialSelected,
   jsonData,
   loadingJson,
   isCompareMode,
 }: MainContentProps) {
-  if (selected.length === 0) {
+  
+  const { runs, handleProfileUpdate, handleRunUpdate } = useOptimisticRuns(initialSelected);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  // Comments popup state
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsRun, setCommentsRun] = useState<Run | null>(null);
+
+
+  // 2. NOW you can do conditional returns
+  if (initialSelected.length === 0) {
     return (
       <main className="flex-1 overflow-y-auto p-8 bg-background">
         <EmptyState />
@@ -23,8 +50,7 @@ export function MainContent({
     );
   }
 
-  // Collect any fetch errors for the currently selected runs.
-  const fetchErrors = selected
+  const fetchErrors = runs
     .map((run) => {
       const data = jsonData[run.id];
       if (data && data.error) {
@@ -45,20 +71,21 @@ export function MainContent({
   return (
     <main className="flex-1 overflow-y-auto p-8 bg-background">
       <div className="w-full pb-20">
-        {/* Error banner for any fetch errors */}
         {fetchErrors.length > 0 && (
           <div
             role="alert"
             className="mb-6 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700"
           >
-            <strong className="block font-medium">Error loading run data</strong>
+            <strong className="block font-medium">
+              Error loading run data
+            </strong>
             <ul className="mt-2 list-disc list-inside">
               {fetchErrors.map((e) => (
                 <li key={e.id}>
                   {e.title ? `${e.title}: ` : `Run ${e.id}: `}
                   {e.message}
-                  {'\n'}
-                  {" Please check the backend server and S3 storage are running and connected."}
+                  {"\n"}
+                  { " Please check the backend server and S3 storage are running and connected." }
                 </li>
               ))}
             </ul>
@@ -66,14 +93,56 @@ export function MainContent({
         )}
         {fetchErrors.length === 0 && (
           <>
-            <div className="mb-8">
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isCompareMode ? "Run Comparison" : selected[0]?.title || "Run Details"}
+            {isPopupOpen && (
+              <ProfilePopup
+                isOpen={isPopupOpen}
+                onClose={() => setIsPopupOpen(false)}
+                selected={runs} 
+                onProfileUpdate={handleProfileUpdate}
+              />
+            )}
+
+            {/* Comments popup for run notes */}
+            <CommentsPopup
+              isOpen={Boolean(commentsOpen)}
+              onClose={() => { setCommentsOpen(false); setCommentsRun(null); }}
+              comments={commentsRun?.comments ?? null}
+              title={commentsRun?.title ?? null}
+              runId={commentsRun?.id ?? null}
+              onSave={async (id: number, newComments: string) => {
+                // Persist via API and then update local state
+                try {
+                  await updateRun(id, { comments: newComments });
+                  // update local state on success
+                  handleRunUpdate(id, { comments: newComments });
+                } catch (e) {
+                  console.error("Failed to persist comments", e);
+                  // Optionally, add user-facing error handling here.
+                }
+              }}
+            />
+
+            <div className="w-full flex justify-between mb-8" >
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
+                {isCompareMode ? "Run Comparison" : runs[0]?.title || "Run Details"}
               </h1>
+              <button 
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
+                onClick={() => setIsPopupOpen(true)}
+              >
+                <UserIcon className="size-5" />
+              </button>
             </div>
 
+            {/* Metadata section (extracted to RunsMetadata component) */}
+            <RunsMetadata
+              runs={runs}
+              jsonData={jsonData}
+              onOpenComments={(r) => { setCommentsRun(r); setCommentsOpen(true); }}
+            />
+
             <DisplacementSection
-              selected={selected}
+              selected={runs}
               jsonData={jsonData}
               isCompareMode={isCompareMode}
             />
@@ -81,14 +150,12 @@ export function MainContent({
             <SectionDivider />
 
             <HistogramSection
-              selected={selected}
+              selected={runs}
               jsonData={jsonData}
               isCompareMode={isCompareMode}
             />
           </>
         )}
-
-
       </div>
     </main>
   );

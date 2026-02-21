@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel previous runs if a new commit is pushed to the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------
+  # JOB 1: BACKEND (Drizzle + Server)
+  # ------------------------------------------------------------------
+  backend:
+    name: Backend Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Database Package
+        run: bun run --filter=@repo/database build
+   
+      - name: Run Backend Tests
+        run: cd apps/backend && bun test
+
+      - name: Type Check, Lint, and Build
+        run: bun run turbo run check-types lint build db:check --filter=backend
+
+      - name: Build the database
+        run: bun run --filter=@repo/database build && bun run --filter=backend build
+
+      - name: Build the backend
+        run: bun run --filter=backend build
+
+  # ------------------------------------------------------------------
+  # JOB 2: FRONTEND (React Router)
+  # ------------------------------------------------------------------
+  frontend:
+    name: Frontend Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Frontend Tests
+        run: bun run turbo run check-types lint build --filter=frontend
+
+      - name: Build the frontend
+        run: cd apps/frontend && bun install && bun run build

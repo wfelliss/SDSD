@@ -7,6 +7,8 @@ export interface SeriesConfig {
   color: string;
   rawData: RawSuspensionData[];
   freq: number;
+  min?: number;
+  max?: number;
   dynamicSag?: boolean;
 }
 
@@ -33,22 +35,24 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
     const lines: NormalizedPoint[][] = [];
     const metadata: LineMetadata[] = [];
 
-    series.forEach((s, seriesIndex) => {
-      // Process the raw data
-      const processed = processLinePlotData(s.rawData, s.freq);
-      lines.push(processed);
-      metadata.push({ seriesIndex, isSag: false });
+    if (dynamicSag.front && series[0]) {
+      const clean = processLinePlotData(dynamicSag.front, series[0].freq);
+      output.push(calculateMovingAverage(clean, series[0].freq));
+    }
 
-      // If dynamicSag is enabled, also add the smoothed overlay
-      if (s.dynamicSag) {
-        const smoothed = calculateMovingAverage(processed, s.freq);
-        lines.push(smoothed);
-        metadata.push({ seriesIndex, isSag: true });
-      }
-    });
+    if (dynamicSag.rear && series[1]) {
+      const clean = processLinePlotData(dynamicSag.rear, series[1].freq);
+      output.push(calculateMovingAverage(clean, series[1].freq));
+    }
 
-    return { chartData: lines, lineMetadata: metadata };
-  }, [series]);
+    return output;
+  }, [dynamicSag, series]);
+
+  // chart data calculation
+  const chartData = useMemo(() => {
+    const mainLines = series.map(s => processLinePlotData(s.rawData, s.freq));
+    return [...mainLines, ...sagLines];
+  }, [series, sagLines]);
 
   if (chartData.length === 0 || chartData[0]?.length === 0) {
     return <div className="p-4 text-gray-400 italic">No data available for {title}</div>;

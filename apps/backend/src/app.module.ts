@@ -4,6 +4,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { DatabaseModule } from "./database/database.module";
 import { UsersModule } from "./users/users.module";
+import { ProfilesModule } from "./profiles/profiles.module";
 import { RunsModule } from "./runs/runs.module";
 import { S3Module } from "./s3/s3.module";
 
@@ -14,8 +15,9 @@ import { S3Module } from "./s3/s3.module";
     }),
     DatabaseModule,
     UsersModule,
+    ProfilesModule,
     RunsModule,
-    S3Module
+    S3Module,
   ],
   controllers: [AppController],
   providers: [AppService],

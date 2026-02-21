@@ -1,9 +1,73 @@
 {
-  "id": "4fb95d10-b801-4004-8b91-94a4da75e9f7",
-  "prevId": "bc5399fa-a45b-485e-b2ab-f9ef72d27922",
+  "id": "7c11443d-5f85-46d6-be94-c11e2bbe315f",
+  "prevId": "9c5cb50d-ad8f-462e-b06b-9c90d6298e65",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.profiles": {
+      "name": "profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "front_min": {
+          "name": "front_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "front_max": {
+          "name": "front_max",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 4096
+        },
+        "back_min": {
+          "name": "back_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "back_max": {
+          "name": "back_max",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 4096
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "public.runs": {
       "name": "runs",
       "schema": "",
@@ -16,7 +80,7 @@
         },
         "src_path": {
           "name": "src_path",
-          "type": "text",
+          "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": true
         },
@@ -51,6 +115,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "profile": {
+          "name": "profile",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "front_freq": {
+          "name": "front_freq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rear_freq": {
+          "name": "rear_freq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -60,9 +142,31 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "runs_profile_profiles_id_fk": {
+          "name": "runs_profile_profiles_id_fk",
+          "tableFrom": "runs",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {
+        "runs_src_path_unique": {
+          "name": "runs_src_path_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "src_path"
+          ]
+        }
+      }
     },
     "public.users": {
       "name": "users",

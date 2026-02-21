@@ -1,11 +1,15 @@
-import { RunItem, RunJson } from "app/types/runs";
-import { DisplacementPlot, SeriesConfig } from "app/components/graphs/domain/DisplacementPlot";
+import { RunJson } from "app/types/runs";
+import {
+  DisplacementPlot,
+  SeriesConfig,
+} from "app/components/graphs/domain/DisplacementPlot";
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
+import { Run } from "@repo/database";
 import { RawSuspensionData } from "app/lib/telemetryUtils";
 
 interface ChartSectionProps {
-  selected: RunItem[];
+  selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
 }
@@ -33,28 +37,54 @@ function getFrequency(run: RunItem, type: 'front' | 'rear'): number {
 }
 
 function getSeriesConfig(
-  run: RunItem,
+  run: Run,
   index: number,
   jsonData: Record<number, RunJson>,
-  type: 'front' | 'rear',
+  type: "front" | "rear",
   customLabel?: string,
   dynamicSag?: boolean
 ): SeriesConfig {
   const data = jsonData[run.id];
-  const rawData = getSuspensionData(data, type);
-  const freq = getFrequency(run, type);
+  const isError = !data || data.error;
+  const rawData = isError
+    ? []
+    : type === "front"
+      ? data.data.suspension.front_sus
+      : data.data.suspension.rear_sus;
+  const freq = isError
+    ? 100
+    : type === "front"
+      ? run.front_freq || 100
+      : run.rear_freq || 100;
+  // Attempt to read profile ranges if the backend included the profile relation
+  const profile = (run as any).profile ?? (run as any).profile_id ?? null;
+  const min = profile
+    ? type === "front"
+      ? profile.front_min
+      : profile.back_min
+    : undefined;
+  const max = profile
+    ? type === "front"
+      ? profile.front_max
+      : profile.back_max
+    : undefined;
 
   return {
     label: customLabel ?? run.title ?? `Run ${run.id}`,
     color: getSeriesColor(index),
     rawData,
     freq,
-    dynamicSag
+    min,
+    max,
   };
 }
 
 // ---------------------- Displacement Plot ----------------------
-export function DisplacementSection({ selected, jsonData, isCompareMode }: ChartSectionProps) {
+export function DisplacementSection({
+  selected,
+  jsonData,
+  isCompareMode,
+}: ChartSectionProps) {
   if (!selected || selected.length === 0 || !selected[0]) {
     return <SectionHeader>No run selected</SectionHeader>;
   }
@@ -72,15 +102,23 @@ export function DisplacementSection({ selected, jsonData, isCompareMode }: Chart
         <div className="grid grid-cols-1 gap-6 w-full">
           <DisplacementPlot
             title="Front Fork Comparison"
-            series={selected.map((run, i) => getSeriesConfig(run, i, jsonData, 'front', undefined, true))}
+            dynamicSag={{
+              front: firstData?.data?.suspension?.front_sus,
+              rear: secondData?.data?.suspension?.front_sus,
+            }}
+            series={selected.map((run, i) =>
+              getSeriesConfig(run, i, jsonData, "front")
+            )}
           />
           <DisplacementPlot
             title="Rear Shock Comparison"
             series={selected.map((run, i) => getSeriesConfig(run, i, jsonData, 'rear', undefined, true))}
           />
         </div>
-      ) : ( // Single mode
-        firstData && !firstData.error && (
+      ) : (
+        // Single mode
+        firstData &&
+        !firstData.error && (
           <DisplacementPlot
             title="Suspension Displacement"
             series={[
@@ -95,20 +133,47 @@ export function DisplacementSection({ selected, jsonData, isCompareMode }: Chart
 }
 
 // ---------------------- Histogram Plot ----------------------
-export function HistogramSection({ selected, jsonData, isCompareMode }: ChartSectionProps) {
-  
-  const renderHistogram = (run: RunItem, index: number, type: 'front' | 'rear') => {
+export function HistogramSection({
+  selected,
+  jsonData,
+  isCompareMode,
+}: ChartSectionProps) {
+  const renderHistogram = (run: Run, index: number, type: "front" | "rear") => {
     const data = jsonData[run.id];
-    if (!data || data.error) return null; // Silent error
+    if (!data || data.error) return null;
 
-    const rawData = getSuspensionData(data, type);
-    const fillColor = getSeriesColor(index);
+    // Data
+    const rawData =
+      type === "front"
+        ? data.data.suspension.front_sus
+        : data.data.suspension.rear_sus;
+    const profile = (run as any).profile ?? null;
+    const min = profile
+      ? type === "front"
+        ? profile.front_min
+        : profile.back_min
+      : undefined;
+    const max = profile
+      ? type === "front"
+        ? profile.front_max
+        : profile.back_max
+      : undefined;
+
+    // Color
+    const isChart2 = isCompareMode ? index === 1 : type === "rear";
+    const colorVar = isChart2 ? "chart-2" : "chart-1";
 
     return (
       <TravelHistogram
         key={`${type}-${run.id}`}
-        title={isCompareMode ? `${type === 'front' ? 'Front' : 'Rear'}: ${run.title}` : `${type === 'front' ? 'Front' : 'Rear'} Travel`}
+        title={
+          isCompareMode
+            ? `${type === "front" ? "Front" : "Rear"}: ${run.title}`
+            : `${type === "front" ? "Front" : "Rear"} Travel`
+        }
         rawData={rawData}
+        min={min}
+        max={max}
         fillColor={fillColor}
       />
     );
@@ -119,10 +184,10 @@ export function HistogramSection({ selected, jsonData, isCompareMode }: ChartSec
       <SectionHeader>Travel Histogram</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
         <div className="space-y-4">
-          {selected.map((run, i) => renderHistogram(run, i, 'front'))}
+          {selected.map((run, i) => renderHistogram(run, i, "front"))}
         </div>
         <div className="space-y-4">
-          {selected.map((run, i) => renderHistogram(run, i, 'rear'))}
+          {selected.map((run, i) => renderHistogram(run, i, "rear"))}
         </div>
       </div>
     </section>
