@@ -45,10 +45,13 @@ export class ProfilesService {
     id: number,
     profileData: Partial<Omit<Profile, "id" | "createdAt" | "updatedAt">>
   ): Promise<Profile | null> {
+    const { id: _ignoredId, createdAt: _ignoredCreatedAt, updatedAt: _ignoredUpdatedAt, ...safeData } =
+      profileData as Partial<Profile>;
+
     const result = await this.db
       .update(profiles)
       .set({
-        ...profileData,
+        ...safeData,
         updatedAt: new Date(),
       })
       .where(eq(profiles.id, id))
