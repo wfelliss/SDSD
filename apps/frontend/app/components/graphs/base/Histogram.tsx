@@ -43,7 +43,12 @@ export const Histogram: React.FC<HistogramProps> = ({
 
   // Main D3 rendering
   useEffect(() => {
-    if (!data?.length || width === 0 || !containerRef.current) return;
+    if (!containerRef.current || width === 0) return;
+
+    if (!data?.length) {
+      d3.select(containerRef.current).selectAll("svg").remove();
+      return;
+    }
 
     const margin = { top: 20, right: 20, bottom: 40, left: 40 };
     const innerWidth = width - margin.left - margin.right;
@@ -75,18 +80,20 @@ export const Histogram: React.FC<HistogramProps> = ({
       .domain([0, maxBinLength])
       .range([innerHeight, 0]);
 
-    // Clear and rebuild SVG for this render pass
-    d3.select(containerRef.current).selectAll("svg").remove();
-
     const svg = d3
       .select(containerRef.current)
-      .append("svg")
+      .selectAll<SVGSVGElement, null>("svg")
+      .data([null])
+      .join("svg")
       .attr("width", width)
       .attr("height", height)
       .attr("class", "overflow-hidden");
 
     const g = svg
-      .append("g")
+      .selectAll<SVGGElement, null>("g.plot")
+      .data([null])
+      .join("g")
+      .attr("class", "plot")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const tooltip = d3.select(tooltipRef.current);
@@ -125,14 +132,20 @@ export const Histogram: React.FC<HistogramProps> = ({
       });
 
     // Draw axes
-    g.append("g")
+    g.selectAll<SVGGElement, null>("g.x-axis")
+      .data([null])
+      .join("g")
+      .attr("class", "x-axis")
       .attr("transform", `translate(0,${innerHeight})`)
       .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(innerWidth / 80))).tickSizeOuter(0))
       .call((axisGroup) => axisGroup.selectAll(".domain, .tick line").attr("class", "stroke-border"))
       .call((axisGroup) => axisGroup.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
 
     const yTickFormat = maxBinLength < 10 ? d3.format("d") : d3.format("~s");
-    g.append("g")
+    g.selectAll<SVGGElement, null>("g.y-axis")
+      .data([null])
+      .join("g")
+      .attr("class", "y-axis")
       .call(d3.axisLeft(y).ticks(5).tickFormat((value) => yTickFormat(Number(value))))
       .call((axisGroup) => axisGroup.selectAll(".domain, .tick line").attr("class", "stroke-border"))
       .call((axisGroup) => axisGroup.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
