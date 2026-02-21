@@ -43,19 +43,13 @@ export class ProfilesService {
 
   async update(
     id: number,
-    profileData: Partial<Omit<Profile, "id" | "createdAt">>
+    profileData: Partial<Omit<Profile, "id" | "createdAt" | "updatedAt">>
   ): Promise<Profile | null> {
-    
-    // 1. Destructure to separate 'createdAt' (and 'id') from the rest of the data.
-    //    'rest' will contain only the safe fields.
-    //    We treat profileData as 'any' briefly to allow destructuring properties that TS thinks aren't there.
-    const { createdAt, id: _, ...safeData } = profileData as any;
-
     const result = await this.db
       .update(profiles)
       .set({
-        ...safeData, // 👈 Now this is guaranteed clean
-        updatedAt: new Date(), // We verify the date manually here
+        ...profileData,
+        updatedAt: new Date(),
       })
       .where(eq(profiles.id, id))
       .returning();

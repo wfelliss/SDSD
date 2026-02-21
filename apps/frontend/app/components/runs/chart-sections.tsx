@@ -5,8 +5,7 @@ import {
 } from "app/components/graphs/domain/DisplacementPlot";
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
-import { Run } from "@repo/database";
-import { RawSuspensionData } from "app/lib/telemetryUtils";
+import { Profile, Run } from "@repo/database";
 
 interface ChartSectionProps {
   selected: Run[];
@@ -14,26 +13,28 @@ interface ChartSectionProps {
   isCompareMode: boolean;
 }
 
-const DEFAULT_FREQUENCY = 100; // Hz - fallback for missing metadata
+// Extract profile object
+function getProfileFromRun(run: Run): Profile | null {
+  const profileCandidate = (run as Run & { profile?: unknown }).profile;
 
-// Get consistent color for a series based on index 
+  if (
+    !profileCandidate ||
+    typeof profileCandidate !== "object" ||
+    !("front_min" in profileCandidate) ||
+    !("front_max" in profileCandidate) ||
+    !("back_min" in profileCandidate) ||
+    !("back_max" in profileCandidate)
+  ) {
+    return null;
+  }
+
+  return profileCandidate as Profile;
+}
+
+// Chart color mapping by index
 function getSeriesColor(runIndex: number): string {
   const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))"];
   return colors[runIndex % colors.length]!;
-}
-
-
-function getSuspensionData(data: RunJson | undefined, type: 'front' | 'rear'): RawSuspensionData[] {
-  if (!data || data.error) {
-    return [];
-  }
-  const suspensionData = data?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
-  return Array.isArray(suspensionData) ? suspensionData : [];
-}
-
-function getFrequency(run: RunItem, type: 'front' | 'rear'): number {
-  const freq = type === 'front' ? run.front_freq : run.rear_freq;
-  return typeof freq === 'number' ? freq : DEFAULT_FREQUENCY;
 }
 
 function getSeriesConfig(
@@ -42,8 +43,9 @@ function getSeriesConfig(
   jsonData: Record<number, RunJson>,
   type: "front" | "rear",
   customLabel?: string,
-  dynamicSag?: boolean
+  dynamicSag?: boolean,
 ): SeriesConfig {
+  // Resolve telemetry source and frequency
   const data = jsonData[run.id];
   const isError = !data || data.error;
   const rawData = isError
@@ -56,8 +58,9 @@ function getSeriesConfig(
     : type === "front"
       ? run.front_freq || 100
       : run.rear_freq || 100;
-  // Attempt to read profile ranges if the backend included the profile relation
-  const profile = (run as any).profile ?? (run as any).profile_id ?? null;
+
+  // Apply rider profile min/max range
+  const profile = getProfileFromRun(run);
   const min = profile
     ? type === "front"
       ? profile.front_min
@@ -69,6 +72,7 @@ function getSeriesConfig(
       : profile.back_max
     : undefined;
 
+  // Build unified series config for displacement rendering
   return {
     label: customLabel ?? run.title ?? `Run ${run.id}`,
     color: getSeriesColor(index),
@@ -76,6 +80,7 @@ function getSeriesConfig(
     freq,
     min,
     max,
+    dynamicSag,
   };
 }
 
@@ -90,40 +95,35 @@ export function DisplacementSection({
   }
 
   const first = selected[0];
-  const second = selected[1] || null;
   const firstData = jsonData[first.id];
-  const secondData = second ? jsonData[second.id] : undefined;
 
   return (
     <section>
       <SectionHeader>Displacement Plot</SectionHeader>
 
-      {isCompareMode ? ( // Compare mode
+      {isCompareMode ? (
         <div className="grid grid-cols-1 gap-6 w-full">
           <DisplacementPlot
             title="Front Fork Comparison"
-            dynamicSag={{
-              front: firstData?.data?.suspension?.front_sus,
-              rear: secondData?.data?.suspension?.front_sus,
-            }}
             series={selected.map((run, i) =>
-              getSeriesConfig(run, i, jsonData, "front")
+              getSeriesConfig(run, i, jsonData, "front", undefined, true)
             )}
           />
           <DisplacementPlot
             title="Rear Shock Comparison"
-            series={selected.map((run, i) => getSeriesConfig(run, i, jsonData, 'rear', undefined, true))}
+            series={selected.map((run, i) =>
+              getSeriesConfig(run, i, jsonData, "rear", undefined, true)
+            )}
           />
         </div>
       ) : (
-        // Single mode
         firstData &&
         !firstData.error && (
           <DisplacementPlot
             title="Suspension Displacement"
             series={[
-              getSeriesConfig(first, 0, jsonData, 'front', "Front Fork", true),
-              getSeriesConfig(first, 1, jsonData, 'rear', "Rear Shock", true)
+              getSeriesConfig(first, 0, jsonData, "front", "Front Fork", true),
+              getSeriesConfig(first, 1, jsonData, "rear", "Rear Shock", true),
             ]}
           />
         )
@@ -142,12 +142,12 @@ export function HistogramSection({
     const data = jsonData[run.id];
     if (!data || data.error) return null;
 
-    // Data
+    // Extract raw suspension channel
     const rawData =
       type === "front"
         ? data.data.suspension.front_sus
         : data.data.suspension.rear_sus;
-    const profile = (run as any).profile ?? null;
+    const profile = getProfileFromRun(run);
     const min = profile
       ? type === "front"
         ? profile.front_min
@@ -159,9 +159,9 @@ export function HistogramSection({
         : profile.back_max
       : undefined;
 
-    // Color
+    // Keep side/compare coloring stable
     const isChart2 = isCompareMode ? index === 1 : type === "rear";
-    const colorVar = isChart2 ? "chart-2" : "chart-1";
+    const fillColor = getSeriesColor(isChart2 ? 1 : 0);
 
     return (
       <TravelHistogram

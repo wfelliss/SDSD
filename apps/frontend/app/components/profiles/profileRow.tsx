@@ -4,31 +4,29 @@ import { Transition } from "@headlessui/react";
 import { cn, formatDate } from "app/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "app/api/client";
+import { MAX_TRAVEL } from "app/lib/telemetryUtils";
+import type { Profile as DbProfile } from "@repo/database";
 
-
-export interface Profile {
-  id: number;
-  name: string;
-  front_min: number;
-  front_max: number;
-  back_min: number;
-  back_max: number;
+export type Profile = DbProfile & {
   createdAt: Date | string;
   updatedAt: Date | string;
-}
+};
 
 
 interface ProfileRowProps {
-  profile: Profile;
+  profile: Profile | null;
   onProfileChange?: (profile: Profile) => void;
 }
 
 export function ProfileRow({ profile: initialProfile, onProfileChange }: ProfileRowProps) {
+  if (!initialProfile) {
+    return null;
+  }
+
   const [editing, setEditing] = useState(false);
   const [hovering, setHovering] = useState(false);
 
   const [profile, setProfile] = useState(initialProfile);
-  const MAX_TRAVEL = 4096;
 
   function numberFieldChangeHandler(field: 'front_min' | 'front_max' | 'back_min' | 'back_max') {
     return (e: React.ChangeEvent<HTMLInputElement>) => {

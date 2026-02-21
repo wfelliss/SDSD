@@ -24,8 +24,8 @@ export default function Runs() {
   const loadingJson = loadingRuns.size > 0;
 
   useEffect(() => {
-    const fetchJson = async (run: RunItem) => {
-      setLoadingJson(true);
+    const fetchJson = async (run: Run) => {
+      setLoadingRuns((prev) => new Set(prev).add(run.id));
       try {
         const files = await getFile(run.srcPath);
         if (!files) throw new Error(`Failed to fetch file: ${run.srcPath}`);

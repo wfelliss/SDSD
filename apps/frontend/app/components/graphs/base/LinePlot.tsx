@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import * as d3 from "d3";
 
 export interface DataPoint {
@@ -25,6 +25,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const clipPathId = useId();
   const [width, setWidth] = useState(0);
   
   // Persist scales for brush
@@ -46,7 +47,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Main logic
+  // Main D3 rendering logic
   useEffect(() => {
     if (!svgRef.current || data.length === 0 || width === 0) return;
 
@@ -58,6 +59,8 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
     const innerHeight2 = height - margin2.top - margin2.bottom;
+
+    if (innerWidth <= 0 || innerHeight <= 0 || innerHeight2 <= 0) return;
 
     // Determine X Domain
     let finalXDomain: [number, number];
@@ -84,7 +87,8 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       
       const lineGenerator = d3.line<DataPoint>()
         .x((d) => x(d.x))
-        .y((d) => y(d.y));
+        .y((d) => y(d.y))
+        .curve(d3.curveMonotoneX);
       
       svg.select(".focus")
         .selectAll<SVGPathElement, DataPoint[]>(".line-path")
@@ -93,10 +97,10 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
     };
 
-    // Clip path
+    // Clip path (scoped per component instance)
     svg.selectAll("defs").data([null]).join("defs")
       .selectAll("clipPath").data([null]).join("clipPath")
-      .attr("id", "clip")
+      .attr("id", clipPathId)
       .selectAll("rect").data([null]).join("rect")
       .attr("width", innerWidth)
       .attr("height", innerHeight);
@@ -138,15 +142,21 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("transform", `translate(0,${innerHeight2})`)
       .call(d3.axisBottom(x2) as d3.Axis<number>);
 
-    // Line generators
-    const lineGenerator = d3.line<DataPoint>().x((d) => x(d.x)).y((d) => y(d.y));
-    const lineGenerator2 = d3.line<DataPoint>().x((d) => x2(d.x)).y((d) => y2(d.y));
+    // Line generators with curve smoothing
+    const lineGenerator = d3.line<DataPoint>()
+      .x((d) => x(d.x))
+      .y((d) => y(d.y))
+      .curve(d3.curveMonotoneX);
+    const lineGenerator2 = d3.line<DataPoint>()
+      .x((d) => x2(d.x))
+      .y((d) => y2(d.y))
+      .curve(d3.curveMonotoneX);
 
     // Focus lines
     focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
       .data(data)
       .join("path")
-      .attr("clip-path", "url(#clip)")
+      .attr("clip-path", `url(#${clipPathId})`)
       .attr("class", (_, i) => `line-path ${classForSeries?.(i) ?? ""}`)
       .attr("d", lineGenerator);
 
@@ -170,7 +180,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
 
-  }, [data, width, height, xDomain, yDomain, classForSeries]);
+  }, [data, width, height, xDomain, yDomain, classForSeries, clipPathId]);
 
   return (
     <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>
