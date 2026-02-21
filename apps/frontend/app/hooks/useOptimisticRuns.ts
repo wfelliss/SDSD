@@ -1,7 +1,8 @@
 // app/hooks/useOptimisticRuns.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Profile, Run } from "@repo/database";
+import { Run } from "@repo/database";
+import { Profile } from "app/components/profiles/profileRow";
 
 export function useOptimisticRuns(initialRuns: Run[]) {
   const queryClient = useQueryClient();
@@ -13,7 +14,30 @@ export function useOptimisticRuns(initialRuns: Run[]) {
     setRuns(initialRuns);
   }, [initialRuns]);
 
-  const handleProfileUpdate = useCallback((_: Profile) => {
+  const handleProfileUpdate = useCallback((updatedProfile: Profile) => {
+    setRuns((prevRuns) =>
+      prevRuns.map((run) => {
+        const profileCandidate = (run as Run & { profile?: unknown }).profile;
+
+        if (!profileCandidate || typeof profileCandidate !== 'object' || !("id" in profileCandidate)) {
+          return run;
+        }
+
+        const currentProfile = profileCandidate as Profile;
+        if (currentProfile.id !== updatedProfile.id) {
+          return run;
+        }
+
+        return {
+          ...run,
+          profile: {
+            ...currentProfile,
+            ...updatedProfile,
+          },
+        } as unknown as Run;
+      })
+    );
+
     queryClient.invalidateQueries({ queryKey: ['runs'] });
   }, [queryClient]);
 
