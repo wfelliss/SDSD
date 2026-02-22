@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
 export interface HistogramBin {
@@ -51,16 +51,19 @@ export const Histogram: React.FC<HistogramProps> = ({
   }, []);
 
   // Main D3 rendering
-  const finalSeries: HistogramSeries[] =
-    series && series.length > 0
-      ? series
-          .filter((s) => Array.isArray(s.data))
-          .map((s, index) => ({
-            label: s.label || `Series ${index + 1}`,
-            data: s.data,
-            color: s.color,
-          }))
-      : [{ label: title || 'Distribution', data, color: fillColor }];
+  const finalSeries: HistogramSeries[] = useMemo(
+    () =>
+      series && series.length > 0
+        ? series
+            .filter((s) => Array.isArray(s.data))
+            .map((s, index) => ({
+              label: s.label || `Series ${index + 1}`,
+              data: s.data,
+              color: s.color,
+            }))
+        : [{ label: title || 'Distribution', data, color: fillColor }],
+    [series, title, data, fillColor],
+  );
 
   useEffect(() => {
     if (!containerRef.current || width === 0) return;
@@ -172,6 +175,14 @@ export const Histogram: React.FC<HistogramProps> = ({
       return b.percent - a.percent;
     });
 
+    const barsByBin = d3.group(bars, (bar) => bar.binIndex);
+    const minPercentByBin = new Map(
+      Array.from(barsByBin, ([binIndex, binBars]) => [
+        binIndex,
+        d3.min(binBars, (b) => b.percent) ?? 0,
+      ]),
+    );
+
     // Draw overlaid bars (all in same bin) + interactive tooltip
     g.selectAll<SVGRectElement, RenderBar>("rect")
       .data(bars, (bar) => `${bar.seriesIndex}-${bar.binIndex}`)
@@ -190,17 +201,16 @@ export const Histogram: React.FC<HistogramProps> = ({
         if (hoveredSeriesIndex !== null && bar.seriesIndex !== hoveredSeriesIndex) {
           return 0.2;
         }
-        
-        // Find all bars in same bin, apply lower opacity to smallest
-        const barsInBin = bars.filter((b) => b.binIndex === bar.binIndex);
-        const minPercent = Math.min(...barsInBin.map((b) => b.percent));
+
+        // Apply lower opacity to the smallest bar in each bin
+        const minPercent = minPercentByBin.get(bar.binIndex) ?? 0;
         return bar.percent === minPercent ? 0.7 : 1;
       })
       .attr("class", "cursor-pointer")
       .on("mouseenter", function (event: MouseEvent, bar) {
         d3.select(this).style("filter", "brightness(1.1)");
-        
-        const barsInBin = bars.filter((b) => b.binIndex === bar.binIndex);
+
+        const barsInBin = barsByBin.get(bar.binIndex) ?? [];
         const range = `${bar.x0.toFixed(1)} - ${bar.x1.toFixed(1)}`;
         const tooltipLines = barsInBin
           .map((b) => `<div class="text-xs text-gray-600">${b.label}: ${b.percent.toFixed(1)}%</div>`)
@@ -208,7 +218,7 @@ export const Histogram: React.FC<HistogramProps> = ({
         
         tooltip
           .style("opacity", 1)
-          .html(`<div class="text-xs text-gray-500"></div>${tooltipLines}`);
+                    .html(`<div class="text-xs text-gray-500">Range: ${range}</div>${tooltipLines}`);
 
         const [xPos, yPos] = d3.pointer(event, containerRef.current);
         tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
@@ -241,7 +251,7 @@ export const Histogram: React.FC<HistogramProps> = ({
       .call((axisGroup) => axisGroup.selectAll(".domain, .tick line").attr("class", "stroke-border"))
       .call((axisGroup) => axisGroup.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
 
-  }, [finalSeries, data, series, width, height, fillColor, title, xDomain, binCount, hoveredSeriesIndex]); 
+  }, [finalSeries, width, height, fillColor, xDomain, binCount, hoveredSeriesIndex]); 
 
   return (
     <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative w-full ${className}`} ref={containerRef}>
