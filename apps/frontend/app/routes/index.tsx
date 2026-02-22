@@ -18,13 +18,14 @@ export default function Runs() {
   const { runs } = useLoaderData<typeof loader>();
   const [selected, setSelected] = useState<Run[]>([]);
   const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
-  const [loadingJson, setLoadingJson] = useState(false);
+  const [loadingRuns, setLoadingRuns] = useState<Set<number>>(new Set());
 
   const isCompareMode = selected.length > 1;
+  const loadingJson = loadingRuns.size > 0;
 
   useEffect(() => {
     const fetchJson = async (run: Run) => {
-      setLoadingJson(true);
+      setLoadingRuns((prev) => new Set(prev).add(run.id));
       try {
         const files = await getFile(run.srcPath);
         if (!files) throw new Error(`Failed to fetch file: ${run.srcPath}`);
@@ -36,7 +37,11 @@ export default function Runs() {
           [run.id]: { error: (err as Error).message },
         }));
       } finally {
-        setLoadingJson(false);
+        setLoadingRuns((prev) => {
+          const next = new Set(prev);
+          next.delete(run.id);
+          return next;
+        });
       }
     };
 
