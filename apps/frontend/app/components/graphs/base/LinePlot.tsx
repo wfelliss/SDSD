@@ -12,7 +12,7 @@ interface LinePlotProps {
   yDomain?: [number, number];
   height?: number;
   className?: string;
-  classForSeries?: (index: number) => string;
+  styleForSeries?: (index: number) => React.CSSProperties | undefined;
 }
 
 export const LinePlot: React.FC<LinePlotProps> = ({
@@ -21,7 +21,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   yDomain = [0, 100],
   height = 400,
   className = "",
-  classForSeries,
+  styleForSeries,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -157,14 +157,32 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .data(data)
       .join("path")
       .attr("clip-path", `url(#${clipPathId})`)
-      .attr("class", (_, i) => `line-path ${classForSeries?.(i) ?? ""}`)
+      .attr("class", "line-path")
+      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style("opacity", (_, i) => {
+        const opacity = styleForSeries?.(i)?.opacity;
+        return typeof opacity === "number" ? opacity : null;
+      })
+      .style("stroke-width", (_, i) => {
+        const strokeWidth = styleForSeries?.(i)?.strokeWidth;
+        return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
       .attr("d", lineGenerator);
 
     // Context lines
     context.selectAll<SVGPathElement, DataPoint[]>(".line-context")
       .data(data)
       .join("path")
-      .attr("class", (_, i) => `line-context ${classForSeries?.(i) ?? ""}`)
+      .attr("class", "line-context")
+      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style("opacity", (_, i) => {
+        const opacity = styleForSeries?.(i)?.opacity;
+        return typeof opacity === "number" ? opacity : null;
+      })
+      .style("stroke-width", (_, i) => {
+        const strokeWidth = styleForSeries?.(i)?.strokeWidth;
+        return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
       .attr("d", lineGenerator2);
 
     // Brush
@@ -180,7 +198,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
 
-  }, [data, width, height, xDomain, yDomain, classForSeries, clipPathId]);
+  }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
 
   return (
     <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>

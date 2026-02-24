@@ -6,6 +6,7 @@ import {
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Profile, Run } from "@repo/database";
+import { getSeriesColor } from "app/lib/graphColors";
 
 interface ChartSectionProps {
   selected: Run[];
@@ -29,12 +30,6 @@ function getProfileFromRun(run: Run): Profile | null {
   }
 
   return profileCandidate as Profile;
-}
-
-// Chart color mapping by index
-function getSeriesColor(runIndex: number): string {
-  const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))"];
-  return colors[runIndex % colors.length]!;
 }
 
 function getSeriesConfig(

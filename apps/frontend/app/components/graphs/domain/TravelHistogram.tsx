@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Histogram, HistogramSeries } from "../base/Histogram";
 import { RawSuspensionData, processHistogramData } from "../../../lib/telemetryUtils";
+import { getSeriesColor } from "../../../lib/graphColors";
 
 interface TravelHistogramProps {
   rawData?: RawSuspensionData[];
@@ -33,7 +34,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
     if (series && series.length > 0) {
       return series.map((seriesItem, index) => ({
         label: seriesItem.label,
-        color: seriesItem.fillColor || (index === 0 ? fillColor : undefined),
+        color: getSeriesColor(index, seriesItem.fillColor, fillColor),
         data: processHistogramData(seriesItem.rawData, seriesItem.min, seriesItem.max),
       }));
     }
@@ -60,6 +61,7 @@ export const TravelHistogram: React.FC<TravelHistogramProps> = ({
         xDomain={[0, 100]}
         height={height}
         title={title}
+        fillColor={fillColor}
       />
     </div>
   );

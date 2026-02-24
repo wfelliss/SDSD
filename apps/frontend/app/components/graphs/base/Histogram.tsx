@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { html } from 'd3';
+import { getSeriesColor } from '../../../lib/graphColors';
 
 export interface HistogramBin {
   x0: number;
@@ -60,7 +61,7 @@ export const Histogram: React.FC<HistogramProps> = ({
             .map((s, index) => ({
               label: s.label || `Series ${index + 1}`,
               data: s.data,
-              color: s.color,
+              color: getSeriesColor(index, s.color, fillColor),
             }))
         : [{ label: title || 'Distribution', data, color: fillColor }],
     [series, title, data, fillColor],
@@ -150,7 +151,7 @@ export const Histogram: React.FC<HistogramProps> = ({
     const bars: RenderBar[] = binsBySeries.flatMap((seriesBins, seriesIndex) => {
       const seriesConfig = finalSeries[seriesIndex];
       const totalPoints = seriesConfig?.data.length ?? 0;
-      const color = seriesConfig?.color || fillColor;
+      const color = seriesConfig?.color ?? fillColor;
       const label = seriesConfig?.label || `Series ${seriesIndex + 1}`;
 
       return seriesBins.map((bin, binIndex) => {
