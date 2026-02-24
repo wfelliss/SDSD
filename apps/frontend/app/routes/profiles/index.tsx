@@ -2,6 +2,7 @@ import type { MetaFunction } from "react-router";
 import { useLoaderData } from "react-router";
 import { ProfileRow} from "../../components/profiles/profileRow";
 import { getProfiles } from "app/api/profiles";
+import { Profile } from "@repo/database";
 
 export const meta: MetaFunction = () => {
   return [
@@ -22,6 +23,10 @@ export const loader = async () => {
 
 export default function ProfilesPage() {
   const { profiles} = useLoaderData<typeof loader>();
+  const safeProfiles = (profiles ?? []).filter(
+    (profile: Profile | null | undefined): profile is Profile =>
+      Boolean(profile && profile.id && profile.name),
+  );
 
   return (
     <div className="flex flex-col items-center pt-20">
@@ -33,10 +38,9 @@ export default function ProfilesPage() {
           </p>
         </div>
         <ul className="flex flex-col rounded shadow bg-card-background-primary divide-y-2 divide-page-background-primary">
-          {profiles?.map(
-            (profile) =>
-              profile && <ProfileRow key={profile.id} profile={profile} />
-          )}
+          {safeProfiles.map((profile) => (
+            <ProfileRow key={profile.id} profile={profile} />
+          ))}
         </ul>
       </div>
     </div>

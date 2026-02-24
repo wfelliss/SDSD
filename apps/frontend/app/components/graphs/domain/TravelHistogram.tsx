@@ -1,60 +1,67 @@
-import React, { useMemo } from 'react';
-import * as d3 from 'd3';
-import { Histogram, HistogramBin } from "../base/Histogram";
-import { processHistogramData } from "../../../lib/telemetryUtils";
+import React, { useMemo } from "react";
+import { Histogram, HistogramSeries } from "../base/Histogram";
+import { RawSuspensionData, processHistogramData } from "../../../lib/telemetryUtils";
+import { getSeriesColor } from "../../../lib/graphColors";
 
 interface TravelHistogramProps {
-  rawData: any[];
+  rawData?: RawSuspensionData[];
+  series?: {
+    label: string;
+    rawData: RawSuspensionData[];
+    fillColor?: string;
+    min?: number;
+    max?: number;
+  }[];
   title?: string;
-  colorClass?: string;
-  hoverColorClass?: string;
+  fillColor?: string;
   height?: number;
   min?: number;
   max?: number;
 }
 
-export const TravelHistogram: React.FC<TravelHistogramProps> = ({ 
-  rawData,
+// Renders a histogram of displacement values
+export const TravelHistogram: React.FC<TravelHistogramProps> = ({
+  rawData = [],
+  series,
   title = "Suspension Travel",
-  colorClass = "fill-blue-500",
-  hoverColorClass = "fill-blue-700",
-  height = 160,
+  fillColor = "hsl(var(--chart-1))",
+  height = 200,
   min,
-  max
+  max,
 }) => {
-  
-  // Normalize raw data and bin it
-  const bins = useMemo(() => {
-    const normalized = processHistogramData(rawData, min, max);
-    if (normalized.length === 0) return [];
-    
-    const binGenerator = d3.bin()
-      .domain([0, 100])
-      .thresholds(20);
-    
-    const binnedData = binGenerator(normalized);
-    const totalCount = normalized.length;
-    
-    return binnedData.map(d => ({
-      x0: d.x0 ?? 0,
-      x1: d.x1 ?? 0,
-      percent: Math.round(d.length / totalCount * 100)
-    })) as HistogramBin[];
-  }, [rawData, min, max]);
+  // Normalize raw displacement points into percentages for one or many series.
+  const histogramSeries = useMemo<HistogramSeries[]>(() => {
+    if (series && series.length > 0) {
+      return series.map((seriesItem, index) => ({
+        label: seriesItem.label,
+        color: getSeriesColor(index, seriesItem.fillColor, fillColor),
+        data: processHistogramData(seriesItem.rawData, seriesItem.min, seriesItem.max),
+      }));
+    }
 
-  if (bins.length === 0) {
-    return <div className="h-40 flex items-center justify-center text-r text-sm">No data</div>;
+    return [
+      {
+        label: title,
+        color: fillColor,
+        data: processHistogramData(rawData, min, max),
+      },
+    ];
+  }, [series, rawData, min, max, fillColor, title]);
+
+  // Keep layout stable
+  if (!histogramSeries.some((seriesItem) => seriesItem.data.length > 0)) {
+    return <div className="h-40 flex items-center justify-center text-gray-500 text-sm">No data</div>;
   }
 
+  // Histogram rendered on a percentage domain (bars overlay in same bins).
   return (
     <div className="w-full">
       <Histogram
-        bins={bins}
+        series={histogramSeries}
         xDomain={[0, 100]}
-        height={height} 
-        colorClass={colorClass} 
-        hoverColorClass={hoverColorClass} 
-        title={title}        
+        height={height}
+        title={title}
+        fillColor={fillColor}
       />
     </div>
   );

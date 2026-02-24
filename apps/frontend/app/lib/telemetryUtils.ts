@@ -1,5 +1,5 @@
-export const MAX_TRAVEL = 4096; // replace with rider max travel data 
-const WINDOWMS = 500 // histogram window length - usually 100ms to 300ms window
+export const MAX_TRAVEL = 4096;
+const WINDOWMS = 600;
 
 export type RawSuspensionData = number | { displacement: number; timebase?: number };
 
@@ -17,12 +17,12 @@ export function normalizeToPercentage(val: number, min?: number, max?: number): 
   const hasValidRange = typeof min === 'number' && typeof max === 'number' && isFinite(min) && isFinite(max) && max > min;
 
   if (!hasValidRange) {
-    const result = 100 - (val / MAX_TRAVEL) * 100;
+    const result = (val / MAX_TRAVEL) * 100;
     return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
   }
 
   const pct = (val - (min as number)) / ((max as number) - (min as number));
-  const result = 100 - pct * 100;
+  const result = pct * 100;
   return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
 }
 
