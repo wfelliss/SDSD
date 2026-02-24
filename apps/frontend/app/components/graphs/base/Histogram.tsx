@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import { html } from 'd3';
 
 export interface HistogramBin {
   x0: number;
@@ -176,11 +177,10 @@ export const Histogram: React.FC<HistogramProps> = ({
     });
 
     const barsByBin = d3.group(bars, (bar) => bar.binIndex);
-    const minPercentByBin = new Map(
-      Array.from(barsByBin, ([binIndex, binBars]) => [
-        binIndex,
-        d3.min(binBars, (b) => b.percent) ?? 0,
-      ]),
+    const minPercentByBin = d3.rollup(
+      bars,
+      (v) => d3.min(v, (b) => b.percent) ?? 0,
+      (bar) => bar.binIndex
     );
 
     // Draw overlaid bars (all in same bin) + interactive tooltip
@@ -199,12 +199,14 @@ export const Histogram: React.FC<HistogramProps> = ({
       .attr("opacity", (bar) => {
         // If hovering over legend, dim non-hovered series
         if (hoveredSeriesIndex !== null && bar.seriesIndex !== hoveredSeriesIndex) {
-          return 0.2;
+          return 0.1;
         }
 
-        // Apply lower opacity to the smallest bar in each bin
+        // Apply opacity to the smallest bar in each bin on multi series charts
+        const binBars = barsByBin.get(bar.binIndex) ?? [];
+        if (binBars.length <= 1) return 1;
         const minPercent = minPercentByBin.get(bar.binIndex) ?? 0;
-        return bar.percent === minPercent ? 0.7 : 1;
+        return bar.percent === minPercent ? 0.5 : 1;
       })
       .attr("class", "cursor-pointer")
       .on("mouseenter", function (event: MouseEvent, bar) {
@@ -216,9 +218,14 @@ export const Histogram: React.FC<HistogramProps> = ({
           .map((b) => `<div class="text-xs text-gray-600">${b.label}: ${b.percent.toFixed(1)}%</div>`)
           .join("");
         
-        tooltip
-          .style("opacity", 1)
-                    .html(`<div class="text-xs text-gray-500">Range: ${range}</div>${tooltipLines}`);
+        tooltip.style("opacity", 1);
+        tooltip.selectAll("*").remove();
+        tooltip.append("div").attr("class", "text-xs text-gray-500").text(`Range: ${range}`);
+        barsInBin.forEach((b) => {
+          tooltip.append("div")
+            .attr("class", "text-xs text-gray-600")
+            .text(`${b.label}: ${b.percent.toFixed(1)}%`);
+        });
 
         const [xPos, yPos] = d3.pointer(event, containerRef.current);
         tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
