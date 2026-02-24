@@ -6,6 +6,7 @@ import {
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Profile, Run } from "@repo/database";
+import { getSeriesColor } from "app/lib/graphColors";
 
 interface ChartSectionProps {
   selected: Run[];
@@ -29,12 +30,6 @@ function getProfileFromRun(run: Run): Profile | null {
   }
 
   return profileCandidate as Profile;
-}
-
-// Chart color mapping by index
-function getSeriesColor(runIndex: number): string {
-  const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))"];
-  return colors[runIndex % colors.length]!;
 }
 
 function getSeriesConfig(
@@ -138,57 +133,97 @@ export function HistogramSection({
   jsonData,
   isCompareMode,
 }: ChartSectionProps) {
-  const renderHistogram = (run: Run, index: number, type: "front" | "rear") => {
-    const data = jsonData[run.id];
-    if (!data || data.error) return null;
+  const buildSeries = (type: "front" | "rear") => {
+    return selected
+      .map((run, runIndex) => {
+        const data = jsonData[run.id];
+        if (!data || data.error) {
+          return null;
+        }
 
-    // Extract raw suspension channel
-    const rawData =
-      type === "front"
-        ? data.data.suspension.front_sus
-        : data.data.suspension.rear_sus;
-    const profile = getProfileFromRun(run);
-    const min = profile
-      ? type === "front"
-        ? profile.front_min
-        : profile.back_min
-      : undefined;
-    const max = profile
-      ? type === "front"
-        ? profile.front_max
-        : profile.back_max
-      : undefined;
+        const profile = getProfileFromRun(run);
+        const min =
+          type === "front"
+            ? profile?.front_min
+            : profile?.back_min;
+        const max =
+          type === "front"
+            ? profile?.front_max
+            : profile?.back_max;
 
-    // Keep side/compare coloring stable
-    const isChart2 = isCompareMode ? index === 1 : type === "rear";
-    const fillColor = getSeriesColor(isChart2 ? 1 : 0);
+        return {
+          label: run.title ?? `Run ${run.id}`,
+          rawData:
+            type === "front"
+              ? data.data.suspension.front_sus
+              : data.data.suspension.rear_sus,
+          fillColor: getSeriesColor(runIndex),
+          min,
+          max,
+        };
+      })
+      .filter((seriesItem): seriesItem is NonNullable<typeof seriesItem> => Boolean(seriesItem));
+  };
+
+  const frontSeries = buildSeries("front");
+  const rearSeries = buildSeries("rear");
+
+  if (selected.length === 1 && !isCompareMode) {
+    const singleRun = selected[0];
+    if (!singleRun) {
+      return null;
+    }
+
+    const data = jsonData[singleRun.id];
+    if (!data || data.error) {
+      return (
+        <section>
+          <SectionHeader>Travel Histogram</SectionHeader>
+          <div className="p-4 text-gray-400 italic">No histogram data available</div>
+        </section>
+      );
+    }
 
     return (
-      <TravelHistogram
-        key={`${type}-${run.id}`}
-        title={
-          isCompareMode
-            ? `${type === "front" ? "Front" : "Rear"}: ${run.title}`
-            : `${type === "front" ? "Front" : "Rear"} Travel`
-        }
-        rawData={rawData}
-        min={min}
-        max={max}
-        fillColor={fillColor}
-      />
+      <section>
+        <SectionHeader>Travel Histogram</SectionHeader>
+        <div className="w-1/2">
+          <TravelHistogram
+            title="Suspension Travel"
+            series={[
+              {
+                label: "Front Fork",
+                rawData: frontSeries[0]?.rawData ?? [],
+                fillColor: getSeriesColor(0),
+                min: frontSeries[0]?.min,
+                max: frontSeries[0]?.max,
+              },
+              {
+                label: "Rear Shock",
+                rawData: rearSeries[0]?.rawData ?? [],
+                fillColor: getSeriesColor(1),
+                min: rearSeries[0]?.min,
+                max: rearSeries[0]?.max,
+              },
+            ]}
+          />
+        </div>
+      </section>
     );
-  };
+  }
 
   return (
     <section>
       <SectionHeader>Travel Histogram</SectionHeader>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-        <div className="space-y-4">
-          {selected.map((run, i) => renderHistogram(run, i, "front"))}
-        </div>
-        <div className="space-y-4">
-          {selected.map((run, i) => renderHistogram(run, i, "rear"))}
-        </div>
+      <div className="grid grid-cols-2 gap-6 w-full">
+        <TravelHistogram
+          title="Front Fork Comparison"
+          series={frontSeries}
+        />
+        <TravelHistogram
+          title="Rear Shock Comparison"
+          series={rearSeries}
+        />
       </div>
     </section>
   );

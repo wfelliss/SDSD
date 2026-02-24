@@ -6,10 +6,11 @@ import {
   RawSuspensionData,
   NormalizedPoint,
 } from "../../../lib/telemetryUtils";
+import { getSeriesColor } from "../../../lib/graphColors";
 
 export interface SeriesConfig {
   label: string;
-  color: string;
+  color?: string;
   rawData: RawSuspensionData[];
   freq: number;
   min?: number;
@@ -76,7 +77,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
         <div className="flex gap-4 text-xs">
           {series.map((s, index) => (
             <div key={`${s.label}-${index}`} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ background: s.color }}></div>
+              <div className="w-3 h-3 rounded-full" style={{ background: getSeriesColor(index, s.color) }}></div>
               <span className="font-medium text-gray-600">
                 {s.label}
                 {s.dynamicSag ? " (sag)" : ""}
@@ -91,18 +92,18 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
           data={chartData}
           yDomain={[0, 100]}
           height={height}
-          classForSeries={(i) => {
+          styleForSeries={(i) => {
             const meta = lineMetadata[i];
-            // Fallback style for unexpected metadata mismatches.
             if (!meta) {
-              return i % 2 === 0 ? "line-primary" : "line-secondary";
+              return {
+                stroke: getSeriesColor(i),
+              };
             }
 
-            if (meta.isSag) {
-              return "line-lowemphasis";
-            }
-
-            return meta.seriesIndex % 2 === 0 ? "line-primary" : "line-secondary";
+            return {
+              stroke: getSeriesColor(meta.seriesIndex, series[meta.seriesIndex]?.color),
+              opacity: meta.isSag ? 0.35 : 1,
+            };
           }}
         />
       </div>

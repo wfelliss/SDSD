@@ -1,9 +1,17 @@
 import React, { useMemo } from "react";
-import { Histogram } from "../base/Histogram";
+import { Histogram, HistogramSeries } from "../base/Histogram";
 import { RawSuspensionData, processHistogramData } from "../../../lib/telemetryUtils";
+import { getSeriesColor } from "../../../lib/graphColors";
 
 interface TravelHistogramProps {
-  rawData: RawSuspensionData[];
+  rawData?: RawSuspensionData[];
+  series?: {
+    label: string;
+    rawData: RawSuspensionData[];
+    fillColor?: string;
+    min?: number;
+    max?: number;
+  }[];
   title?: string;
   fillColor?: string;
   height?: number;
@@ -13,32 +21,47 @@ interface TravelHistogramProps {
 
 // Renders a histogram of displacement values
 export const TravelHistogram: React.FC<TravelHistogramProps> = ({
-  rawData,
+  rawData = [],
+  series,
   title = "Suspension Travel",
   fillColor = "hsl(var(--chart-1))",
-  height = 160,
+  height = 200,
   min,
   max,
 }) => {
-  // Normalize raw displacement points into percentages
-  const histData = useMemo(() => {
-    return processHistogramData(rawData, min, max);
-  }, [rawData, min, max]);
+  // Normalize raw displacement points into percentages for one or many series.
+  const histogramSeries = useMemo<HistogramSeries[]>(() => {
+    if (series && series.length > 0) {
+      return series.map((seriesItem, index) => ({
+        label: seriesItem.label,
+        color: getSeriesColor(index, seriesItem.fillColor, fillColor),
+        data: processHistogramData(seriesItem.rawData, seriesItem.min, seriesItem.max),
+      }));
+    }
+
+    return [
+      {
+        label: title,
+        color: fillColor,
+        data: processHistogramData(rawData, min, max),
+      },
+    ];
+  }, [series, rawData, min, max, fillColor, title]);
 
   // Keep layout stable
-  if (histData.length === 0) {
+  if (!histogramSeries.some((seriesItem) => seriesItem.data.length > 0)) {
     return <div className="h-40 flex items-center justify-center text-gray-500 text-sm">No data</div>;
   }
 
-  // Histogram rendered on a percentage domain.
+  // Histogram rendered on a percentage domain (bars overlay in same bins).
   return (
     <div className="w-full">
       <Histogram
-        data={histData}
+        series={histogramSeries}
         xDomain={[0, 100]}
         height={height}
-        fillColor={fillColor}
         title={title}
+        fillColor={fillColor}
       />
     </div>
   );
