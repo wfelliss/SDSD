@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import * as d3 from "d3";
 
 export interface DataPoint {
@@ -12,7 +12,7 @@ interface LinePlotProps {
   yDomain?: [number, number];
   height?: number;
   className?: string;
-  classForSeries?: (index: number) => string;
+  styleForSeries?: (index: number) => React.CSSProperties | undefined;
 }
 
 export const LinePlot: React.FC<LinePlotProps> = ({
@@ -21,36 +21,38 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   yDomain = [0, 100],
   height = 400,
   className = "",
-  classForSeries,
+  styleForSeries,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const clipPathId = useId();
   const [width, setWidth] = useState(0);
+  
+  // Persist scales for brush
+  const scalesRef = useRef({
+    x: d3.scaleLinear(),
+    y: d3.scaleLinear(),
+    x2: d3.scaleLinear(),
+  });
 
-  // Resize observer
+  // Resize observer (under graph)
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
-      if (!entries || entries.length === 0 || !entries[0]) return;
-      setWidth(entries[0].contentRect.width);
+      const entry = entries[0];
+      if (!entry) return;
+      setWidth(entry.contentRect.width);
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, []);
 
-  //  D3 contex ref
-  const contextRef = useRef<any>({
-    initialized: false,
-    x: d3.scaleLinear(),
-    y: d3.scaleLinear(),
-    x2: d3.scaleLinear(),
-    brush: null,     
-    brushGroup: null, 
-  });
-
-  // Main D3 logic
+  // Main D3 rendering logic
   useEffect(() => {
     if (!svgRef.current || data.length === 0 || width === 0) return;
+
+    const svg = d3.select(svgRef.current);
+    const { x, y, x2 } = scalesRef.current;
 
     const margin = { top: 20, right: 20, bottom: 110, left: 40 };
     const margin2 = { top: height - 70, right: 20, bottom: 30, left: 40 };
@@ -58,117 +60,145 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     const innerHeight = height - margin.top - margin.bottom;
     const innerHeight2 = height - margin2.top - margin2.bottom;
 
-    const svg = d3.select(svgRef.current);
-
-    // Brushed interaction handler
-    const brushed = (event: d3.D3BrushEvent<unknown>) => {
-      if (event.sourceEvent && event.sourceEvent.type === "zoom") return;
-      
-      const { x, x2, focus, xAxisGroup } = contextRef.current;
-      
-      const s = (event.selection as [number, number]) || x2.range();
-      x.domain(s.map(x2.invert, x2));
-      
-      focus?.selectAll(".line-path").attr("d", 
-        d3.line<DataPoint>()
-          .x((d) => x(d.x))
-          .y((d) => contextRef.current.y(d.y))
-      );
-      
-      xAxisGroup?.call(d3.axisBottom(x));
-    };
-
-    // Initialization
-    if (!contextRef.current.initialized) {
-      svg.selectAll("*").remove();
-
-      svg.append("defs")
-        .append("clipPath")
-        .attr("id", "clip")
-        .append("rect")
-        .attr("width", innerWidth)
-        .attr("height", innerHeight);
-
-      const focus = svg.append("g").attr("class", "focus").attr("transform", `translate(${margin.left},${margin.top})`);
-      const context = svg.append("g").attr("class", "context").attr("transform", `translate(${margin2.left},${margin2.top})`);
-
-      const xAxisGroup = focus.append("g")
-        .attr("class", "axis axis--x text-muted-foreground text-xs")
-        .attr("transform", `translate(0,${innerHeight})`);
-      const yAxisGroup = focus.append("g").attr("class", "axis axis--y text-muted-foreground text-xs");
-
-      const brush = d3.brushX()
-        .extent([[0, 0], [innerWidth, innerHeight2]])
-        .on("brush end", brushed);
-
-      const brushGroup = context.append("g")
-        .attr("class", "brush")
-        .call(brush);
-
-      contextRef.current = { 
-        ...contextRef.current, 
-        initialized: true, 
-        focus, 
-        context, 
-        xAxisGroup, 
-        yAxisGroup, 
-        brush,       
-        brushGroup   
-      };
-    }
-
-    // Updates
-    const { x, y, x2, focus, context, xAxisGroup, yAxisGroup, brush, brushGroup } = contextRef.current;
-
-    svg.select("#clip rect").attr("width", innerWidth);
+    if (innerWidth <= 0 || innerHeight <= 0 || innerHeight2 <= 0) return;
 
     // Determine X Domain
-    let finalXDomain = xDomain;
-    if (!finalXDomain) {
+    let finalXDomain: [number, number];
+    if (xDomain) {
+      finalXDomain = xDomain;
+    } else {
       const allPoints = data.flat();
-      const xExtent = d3.extent(allPoints, (d) => d.x) as [number, number];
-      finalXDomain = xExtent[0] !== undefined ? xExtent : [0, 100];
+      const xExtent = d3.extent(allPoints, (d) => d.x);
+      finalXDomain = xExtent[0] !== undefined ? xExtent as [number, number] : [0, 100];
     }
-    
+
+    // Update scales
     x.range([0, innerWidth]).domain(finalXDomain);
     y.range([innerHeight, 0]).domain(yDomain);
     x2.range([0, innerWidth]).domain(finalXDomain);
     const y2 = d3.scaleLinear().range([innerHeight2, 0]).domain(yDomain);
 
-    xAxisGroup!.call(d3.axisBottom(x));
-    yAxisGroup!.call(d3.axisLeft(y).ticks(5));
+    // Brushed interaction handler
+    const brushed = (event: d3.D3BrushEvent<unknown>) => {
+      if (event.sourceEvent?.type === "zoom") return;
+      
+      const s = (event.selection as [number, number]) || x2.range();
+      x.domain(s.map(x2.invert, x2));
+      
+      const lineGenerator = d3.line<DataPoint>()
+        .x((d) => x(d.x))
+        .y((d) => y(d.y))
+        .curve(d3.curveMonotoneX);
+      
+      svg.select(".focus")
+        .selectAll<SVGPathElement, DataPoint[]>(".line-path")
+        .attr("d", lineGenerator);
+      
+      svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
+    };
 
-    const lineGenerator = d3.line<DataPoint>().x((d) => x(d.x)).y((d) => y(d.y));
-    const lineGenerator2 = d3.line<DataPoint>().x((d) => x2(d.x)).y((d) => y2(d.y));
+    // Clip path (scoped per component instance)
+    svg.selectAll("defs").data([null]).join("defs")
+      .selectAll("clipPath").data([null]).join("clipPath")
+      .attr("id", clipPathId)
+      .selectAll("rect").data([null]).join("rect")
+      .attr("width", innerWidth)
+      .attr("height", innerHeight);
 
-    // Render Focus lines
-    focus!.selectAll(".line-path")
+    // Focus group (main chart)
+    const focus = svg.selectAll<SVGGElement, null>(".focus")
+      .data([null])
+      .join("g")
+      .attr("class", "focus")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Context group (brush area)
+    const context = svg.selectAll<SVGGElement, null>(".context")
+      .data([null])
+      .join("g")
+      .attr("class", "context")
+      .attr("transform", `translate(${margin2.left},${margin2.top})`);
+
+    // Focus X Axis
+    focus.selectAll<SVGGElement, null>(".x-axis")
+      .data([null])
+      .join("g")
+      .attr("class", "x-axis axis text-muted-foreground text-xs")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(x) as d3.Axis<number>);
+
+    // Focus Y Axis
+    focus.selectAll<SVGGElement, null>(".y-axis")
+      .data([null])
+      .join("g")
+      .attr("class", "y-axis axis text-muted-foreground text-xs")
+      .call(d3.axisLeft(y).ticks(5) as d3.Axis<number>);
+
+    // Context X Axis
+    context.selectAll<SVGGElement, null>(".x-axis")
+      .data([null])
+      .join("g")
+      .attr("class", "x-axis axis text-muted-foreground text-xs")
+      .attr("transform", `translate(0,${innerHeight2})`)
+      .call(d3.axisBottom(x2) as d3.Axis<number>);
+
+    // Line generators with curve smoothing
+    const lineGenerator = d3.line<DataPoint>()
+      .x((d) => x(d.x))
+      .y((d) => y(d.y))
+      .curve(d3.curveMonotoneX);
+    const lineGenerator2 = d3.line<DataPoint>()
+      .x((d) => x2(d.x))
+      .y((d) => y2(d.y))
+      .curve(d3.curveMonotoneX);
+
+    // Focus lines
+    focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
       .data(data)
-      .join(
-        (enter: any) => enter.append("path").attr("clip-path", "url(#clip)"),
-        (update: any) => update,
-        (exit: any) => exit.remove()
-      )
-      .attr("d", lineGenerator)
-      .attr("class", (_: any, i: number) => `line-path ${classForSeries?.(i) ?? ""}`);
+      .join("path")
+      .attr("clip-path", `url(#${clipPathId})`)
+      .attr("class", "line-path")
+      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style("opacity", (_, i) => {
+        const opacity = styleForSeries?.(i)?.opacity;
+        return typeof opacity === "number" ? opacity : null;
+      })
+      .style("stroke-width", (_, i) => {
+        const strokeWidth = styleForSeries?.(i)?.strokeWidth;
+        return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
+      .attr("d", lineGenerator);
 
-    // Render Context lines
-    context!.selectAll(".line-context")
+    // Context lines
+    context.selectAll<SVGPathElement, DataPoint[]>(".line-context")
       .data(data)
-      .join(
-        (enter: any) => enter.append("path"),
-        (update: any) => update,
-        (exit: any) => exit.remove()
-      )
-      .attr("d", lineGenerator2)
-      .attr("class", (_: any, i: number) => `line-context ${i % 2 === 0 ? "line-primary" : "line-secondary"}`);
+      .join("path")
+      .attr("class", "line-context")
+      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style("opacity", (_, i) => {
+        const opacity = styleForSeries?.(i)?.opacity;
+        return typeof opacity === "number" ? opacity : null;
+      })
+      .style("stroke-width", (_, i) => {
+        const strokeWidth = styleForSeries?.(i)?.strokeWidth;
+        return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
+      .attr("d", lineGenerator2);
 
+    // Brush
+    const brush = d3.brushX<null>()
+      .extent([[0, 0], [innerWidth, innerHeight2]])
+      .on("brush end", brushed);
 
-    brush.extent([[0, 0], [innerWidth, innerHeight2]]);
-    brushGroup.call(brush);
-    brushGroup.selectAll(".selection").attr("class", "selection fill-muted-foreground/30 stroke-border");
+    context.selectAll<SVGGElement, null>(".brush")
+      .data([null])
+      .join("g")
+      .attr("class", "brush")
+      .call(brush)
+      .selectAll(".selection")
+      .attr("class", "selection fill-muted-foreground/30 stroke-border");
 
-  }, [data, width, height, yDomain, xDomain]);
+  }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
 
   return (
     <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>

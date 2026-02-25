@@ -1,62 +1,71 @@
 import React, { useMemo } from "react";
 import { LinePlot } from "../base/LinePlot";
-import { processLinePlotData, calculateMovingAverage, RawSuspensionData } from "../../../lib/telemetryUtils";
-
+import {
+  calculateMovingAverage,
+  processLinePlotData,
+  RawSuspensionData,
+  NormalizedPoint,
+} from "../../../lib/telemetryUtils";
+import { getSeriesColor } from "../../../lib/graphColors";
 
 export interface SeriesConfig {
   label: string;
-  color: string;
+  color?: string;
   rawData: RawSuspensionData[];
   freq: number;
   min?: number;
   max?: number;
+  dynamicSag?: boolean;
 }
 
 interface DisplacementPlotProps {
   title?: string;
   series: SeriesConfig[];
-  dynamicSag?: {
-    front?: RawSuspensionData[];
-    rear?: RawSuspensionData[];
-  };
-  width?: number;
   height?: number;
 }
 
+interface LineMetadata {
+  seriesIndex: number;
+  isSag: boolean;
+}
+
+// DisplacementPlot renders suspension displacement
 export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
   title = "Displacement",
   series,
-  dynamicSag,
-  width = 1000,
-  height = 300
-}) => {  
- 
-  // sag lines calculation
-  const sagLines = useMemo(() => {
-    if (!dynamicSag) return [];
+  height = 300,
+}) => {
+  // Build plot lines for each series and optional smoothed sag overlays.
+  const { chartData, lineMetadata } = useMemo(() => {
+    const lines: NormalizedPoint[][] = [];
+    const metadata: LineMetadata[] = [];
 
-    const output: any[] = [];
+    series.forEach((seriesItem, seriesIndex) => {
+      const processed = processLinePlotData(
+        seriesItem.rawData,
+        seriesItem.freq,
+        seriesItem.min,
+        seriesItem.max,
+      );
 
-    if (dynamicSag.front && series[0]) {
-      const clean = processLinePlotData(dynamicSag.front, series[0].freq, series[0].min, series[0].max);
-      output.push(calculateMovingAverage(clean, series[0].freq));
-    }
+      lines.push(processed);
+      metadata.push({ seriesIndex, isSag: false });
 
-    if (dynamicSag.rear && series[1]) {
-      const clean = processLinePlotData(dynamicSag.rear, series[1].freq, series[1].min, series[1].max);
-      output.push(calculateMovingAverage(clean, series[1].freq));
-    }
+      if (seriesItem.dynamicSag) {
+        const smoothed = calculateMovingAverage(processed, seriesItem.freq);
+        if (smoothed.length > 0) {
+          lines.push(smoothed);
+          metadata.push({ seriesIndex, isSag: true });
+        }
+      }
+    });
 
-    return output;
-  }, [dynamicSag, series]);
+    return { chartData: lines, lineMetadata: metadata };
+  }, [series]);
 
-  // chart data calculation
-  const chartData = useMemo(() => {
-    const mainLines = series.map(s => processLinePlotData(s.rawData, s.freq, s.min, s.max));
-    return [...mainLines, ...sagLines];
-  }, [series, sagLines]);
-
-  if (chartData.length === 0 || chartData[0].length === 0) {
+  // No chart if every generated line is empty.
+  const hasAnyData = chartData.some((line) => line.length > 0);
+  if (!hasAnyData) {
     return <div className="p-4 text-gray-400 italic">No data available for {title}</div>;
   }
 
@@ -64,30 +73,37 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
     <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-        {/* Legend for the active series */}
+        {/* Legend for primary series (sag overlays inherit the same color). */}
         <div className="flex gap-4 text-xs">
-          {series.map((s) => (
-            <div key={s.label} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ background: s.color }}></div>
-              <span className="font-medium text-gray-600">{s.label}</span>
+          {series.map((s, index) => (
+            <div key={`${s.label}-${index}`} className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ background: getSeriesColor(index, s.color) }}></div>
+              <span className="font-medium text-gray-600">
+                {s.label}
+                {s.dynamicSag ? " (sag)" : ""}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
       <div className="w-full overflow-hidden">
-        <LinePlot // use base LinePlot component
+        <LinePlot
           data={chartData}
           yDomain={[0, 100]}
-
           height={height}
-
-          classForSeries={(i) => {
-            const mainCount = series.length;
-            if (i < mainCount) {
-              return i % 2 === 0 ? "line-primary" : "line-secondary";
+          styleForSeries={(i) => {
+            const meta = lineMetadata[i];
+            if (!meta) {
+              return {
+                stroke: getSeriesColor(i),
+              };
             }
-            return "line-lowemphasis";
+
+            return {
+              stroke: getSeriesColor(meta.seriesIndex, series[meta.seriesIndex]?.color),
+              opacity: meta.isSag ? 0.35 : 1,
+            };
           }}
         />
       </div>
