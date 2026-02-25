@@ -1,3 +1,5 @@
+import { Profile, Run } from "@repo/database";
+
 export const MAX_TRAVEL = 4096;
 const WINDOWMS = 600;
 
@@ -10,6 +12,19 @@ export interface StandardizedPoint {
 export interface NormalizedPoint {
   x: number; 
   y: number; 
+}
+
+export function getProfileFromRun(run: Run): Profile | null {
+  const profileCandidate = (run as Run & { profile?: unknown }).profile;
+  if (
+    !profileCandidate ||
+    typeof profileCandidate !== "object" ||
+    !("front_min" in profileCandidate) ||
+    !("front_max" in profileCandidate) ||
+    !("back_min" in profileCandidate) ||
+    !("back_max" in profileCandidate)
+  ) return null;
+  return profileCandidate as Profile;
 }
 
 export function normalizeToPercentage(val: number, min?: number, max?: number): number {

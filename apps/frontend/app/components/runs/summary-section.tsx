@@ -1,6 +1,7 @@
 import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
+import { RawSuspensionData, normalizeToPercentage, getProfileFromRun } from "app/lib/telemetryUtils";
 
 interface SummarySectionProps {
   selected: Run[];
@@ -8,11 +9,37 @@ interface SummarySectionProps {
   isCompareMode: boolean;
 }
 
-function calculateDynamicSag(run: Run, suspensionData: RunJson | undefined) {
-  console.log("Calculating Dynamic Sag for run:", run.id);
-  console.log("Run data:", run);
-  console.log("Suspension data:", suspensionData);
-  return 10;
+function calculateDynamicSag(
+  run: Run,
+  jsonData: Record<number, RunJson>,
+  type: 'front' | 'rear',
+): string {
+  const suspensionData: RawSuspensionData[] | undefined =
+    jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
+
+  if (!suspensionData || suspensionData.length === 0) return "—";
+
+  const profile = getProfileFromRun(run);
+  const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
+  const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
+
+  const normalized = suspensionData
+    .map(p => {
+      const val = typeof p === 'number' ? p : Number(p.displacement ?? 0);
+      return normalizeToPercentage(val, min, max);
+    })
+    .filter(v => isFinite(v));
+
+  if (normalized.length === 0) return "—";
+
+  const sorted = [...normalized].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median =
+    sorted.length % 2 === 0
+      ? (sorted[mid - 1]! + sorted[mid]!) / 2
+      : sorted[mid]!;
+
+  return `${median.toFixed(1)}%`;
 }
 
 function calculateCompression(_run: Run, _jsonData: Record<number, RunJson>) {
@@ -89,10 +116,7 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
                 {run.title || `Run ${run.id}`}
               </td>
               <td className="px-3 py-2 text-foreground">
-                {calculateDynamicSag(
-                  run,
-                  jsonData[run.id]?.data?.suspension?.front_sus,
-                )}
+                {calculateDynamicSag(run, jsonData, 'front')}
               </td>
               <td className="px-3 py-2 text-foreground">
                 {calculateCompression(run, jsonData)}
@@ -101,10 +125,7 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
                 {calculateRebound(run, jsonData)}
               </td>
               <td className="px-3 py-2 text-foreground">
-                {calculateDynamicSag(
-                  run,
-                  jsonData[run.id]?.data?.suspension?.rear_sus,
-                )}
+                {calculateDynamicSag(run, jsonData, 'rear')}
               </td>
               <td className="px-3 py-2 text-foreground">
                 {calculateCompression(run, jsonData)}
