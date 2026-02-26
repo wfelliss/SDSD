@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import * as d3 from "d3";
+import { lttbDownsample } from "../../../lib/telemetryUtils";
 
 export interface DataPoint {
   x: number;
@@ -34,6 +35,10 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     y: d3.scaleLinear(),
     x2: d3.scaleLinear(),
   });
+  // Full undownsampled data used inside brush handler without triggering re-renders
+  const fullDataRef = useRef<DataPoint[][]>([]);
+  // RAF token — ensures only one brush frame is pending at a time
+  const rafRef = useRef<number | null>(null);
 
   // Resize observer (under graph)
   useEffect(() => {
@@ -46,6 +51,10 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, []);
+
+  useEffect(() => {
+    fullDataRef.current = data;
+  }, [data]);
 
   // Main D3 rendering logic
   useEffect(() => {
@@ -78,23 +87,37 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     x2.range([0, innerWidth]).domain(finalXDomain);
     const y2 = d3.scaleLinear().range([innerHeight2, 0]).domain(yDomain);
 
-    // Brushed interaction handler
+    // Brushed interaction handler (RAF-throttled + adaptive downsampling)
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent?.type === "zoom") return;
-      
-      const s = (event.selection as [number, number]) || x2.range();
-      x.domain(s.map(x2.invert, x2));
-      
-      const lineGenerator = d3.line<DataPoint>()
-        .x((d) => x(d.x))
-        .y((d) => y(d.y))
-        .curve(d3.curveMonotoneX);
-      
-      svg.select(".focus")
-        .selectAll<SVGPathElement, DataPoint[]>(".line-path")
-        .attr("d", lineGenerator);
-      
-      svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
+      if (rafRef.current !== null) return; // drop event if frame already queued
+
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+
+        const s = (event.selection as [number, number]) || x2.range();
+        x.domain(s.map(x2.invert, x2));
+
+        const [xMin, xMax] = x.domain() as [number, number];
+        const targetPoints = Math.max(500, innerWidth * 2);
+
+        const visibleData = fullDataRef.current.map((series) => {
+          const filtered = series.filter((d) => d.x >= xMin && d.x <= xMax);
+          return lttbDownsample(filtered, targetPoints);
+        });
+
+        const lineGenerator = d3.line<DataPoint>()
+          .x((d) => x(d.x))
+          .y((d) => y(d.y))
+          .curve(d3.curveLinear);
+
+        svg.select(".focus")
+          .selectAll<SVGPathElement, DataPoint[]>(".line-path")
+          .data(visibleData)
+          .attr("d", lineGenerator);
+
+        svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
+      });
     };
 
     // Clip path (scoped per component instance)
@@ -142,19 +165,24 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("transform", `translate(0,${innerHeight2})`)
       .call(d3.axisBottom(x2) as d3.Axis<number>);
 
-    // Line generators with curve smoothing
+    // Downsample data for initial render
+    const focusInitialTarget = Math.max(500, innerWidth * 2);
+    const focusData   = data.map((s) => lttbDownsample(s, focusInitialTarget));
+    const contextData = data.map((s) => lttbDownsample(s, 500));
+
+    // Line generators
     const lineGenerator = d3.line<DataPoint>()
       .x((d) => x(d.x))
       .y((d) => y(d.y))
-      .curve(d3.curveMonotoneX);
+      .curve(d3.curveLinear);
     const lineGenerator2 = d3.line<DataPoint>()
       .x((d) => x2(d.x))
       .y((d) => y2(d.y))
-      .curve(d3.curveMonotoneX);
+      .curve(d3.curveLinear);
 
     // Focus lines
     focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
-      .data(data)
+      .data(focusData)
       .join("path")
       .attr("clip-path", `url(#${clipPathId})`)
       .attr("class", "line-path")
@@ -171,7 +199,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 
     // Context lines
     context.selectAll<SVGPathElement, DataPoint[]>(".line-context")
-      .data(data)
+      .data(contextData)
       .join("path")
       .attr("class", "line-context")
       .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
@@ -198,6 +226,12 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
 
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
   }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
 
   return (
