@@ -112,11 +112,11 @@ function TravelZoneCell({ value, seconds }: TravelZoneCellProps) {
   return <span className={pillClass} title={tooltip}>{value.toFixed(1)}%</span>;
 }
 
-function calculateCompression(_run: Run, _jsonData: Record<number, RunJson>) {
+function calculateCompression(_run: Run, _jsonData: Record<number, RunJson>, _type: 'front' | 'rear') {
   return 0;
 }
 
-function calculateRebound(_run: Run, _jsonData: Record<number, RunJson>) {
+function calculateRebound(_run: Run, _jsonData: Record<number, RunJson>, _type: 'front' | 'rear') {
   return 0;
 }
 
@@ -143,6 +143,10 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       rearBottomOutSec:  zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
       rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
       rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
+      frontCompression:  calculateCompression(run, jsonData, 'front'),
+      rearCompression:   calculateCompression(run, jsonData, 'rear'),
+      frontRebound:      calculateRebound(run, jsonData, 'front'),
+      rearRebound:       calculateRebound(run, jsonData, 'rear'),
     };
   }, [run, jsonData]);
 
@@ -152,8 +156,8 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       <td className="px-3 py-2 border-l border-border">
         <SagCell value={metrics.frontSag} type="front" />
       </td>
-      <td className="px-3 py-2 text-foreground">{calculateCompression(run, jsonData)}</td>
-      <td className="px-3 py-2 text-foreground">{calculateRebound(run, jsonData)}</td>
+      <td className="px-3 py-2 text-foreground">{metrics.frontCompression}</td>
+      <td className="px-3 py-2 text-foreground">{metrics.frontRebound}</td>
       <td className="px-3 py-2">
         <TravelZoneCell value={metrics.frontBottomOutPct} seconds={metrics.frontBottomOutSec} />
       </td>
@@ -163,8 +167,8 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       <td className="px-3 py-2 border-l border-border">
         <SagCell value={metrics.rearSag} type="rear" />
       </td>
-      <td className="px-3 py-2 text-foreground">{calculateCompression(run, jsonData)}</td>
-      <td className="px-3 py-2 text-foreground">{calculateRebound(run, jsonData)}</td>
+      <td className="px-3 py-2 text-foreground">{metrics.rearCompression}</td>
+      <td className="px-3 py-2 text-foreground">{metrics.rearRebound}</td>
       <td className="px-3 py-2">
         <TravelZoneCell value={metrics.rearBottomOutPct} seconds={metrics.rearBottomOutSec} />
       </td>
