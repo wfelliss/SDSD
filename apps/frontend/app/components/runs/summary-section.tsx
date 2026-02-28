@@ -40,46 +40,28 @@ function getNormalizedSuspensionData(
   return normalized.length === 0 ? null : normalized;
 }
 
-function calculateDynamicSag(
-  run: Run,
-  jsonData: Record<number, RunJson>,
-  type: 'front' | 'rear',
-): number | null {
-  const normalized = getNormalizedSuspensionData(run, jsonData, type);
-  if (!normalized) return null;
-  const sorted = [...normalized].sort((a, b) => a - b);
+function dynamicSag(norm: number[] | null): number | null {
+  if (!norm) return null;
+  const sorted = [...norm].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0
     ? (sorted[mid - 1]! + sorted[mid]!) / 2
     : sorted[mid]!;
 }
 
-function calculateTravelZone(
-  run: Run,
-  jsonData: Record<number, RunJson>,
-  type: 'front' | 'rear',
-  lowerBound: number,
-  upperBound: number,
-): number | null {
-  const normalized = getNormalizedSuspensionData(run, jsonData, type);
-  if (!normalized) return null;
-  const inZone = normalized.filter(v => v >= lowerBound && v <= upperBound).length;
-  return (inZone / normalized.length) * 100;
+function zonePercent(norm: number[] | null, lo: number, hi: number): number | null {
+  if (!norm) return null;
+  return (norm.filter(v => v >= lo && v <= hi).length / norm.length) * 100;
 }
 
-function calculateTravelZoneSeconds(
-  run: Run,
-  jsonData: Record<number, RunJson>,
-  type: 'front' | 'rear',
-  lowerBound: number,
-  upperBound: number,
+function zoneSeconds(
+  norm: number[] | null,
+  freq: number | null,
+  lo: number,
+  hi: number,
 ): number | null {
-  const freq = type === 'front' ? run.front_freq : run.rear_freq;
-  if (!freq) return null;
-  const normalized = getNormalizedSuspensionData(run, jsonData, type);
-  if (!normalized) return null;
-  const inZone = normalized.filter(v => v >= lowerBound && v <= upperBound).length;
-  return inZone / freq;
+  if (!norm || !freq) return null;
+  return norm.filter(v => v >= lo && v <= hi).length / freq;
 }
 
 interface SagCellProps {
@@ -149,23 +131,6 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
     const rearNorm  = getNormalizedSuspensionData(run, jsonData, 'rear');
     const frontFreq = run.front_freq ?? null;
     const rearFreq  = run.rear_freq  ?? null;
-
-    function zonePercent(norm: number[] | null, lo: number, hi: number) {
-      if (!norm) return null;
-      return (norm.filter(v => v >= lo && v <= hi).length / norm.length) * 100;
-    }
-    function zoneSeconds(norm: number[] | null, freq: number | null, lo: number, hi: number) {
-      if (!norm || !freq) return null;
-      return norm.filter(v => v >= lo && v <= hi).length / freq;
-    }
-    function dynamicSag(norm: number[] | null) {
-      if (!norm) return null;
-      const sorted = [...norm].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      return sorted.length % 2 === 0
-        ? (sorted[mid - 1]! + sorted[mid]!) / 2
-        : sorted[mid]!;
-    }
 
     return {
       frontSag:          dynamicSag(frontNorm),
