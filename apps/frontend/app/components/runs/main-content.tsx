@@ -16,6 +16,7 @@ import { RunsMetadata } from "./runs-metadata";
 import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
 import { CommentsPopup } from "./commentsPopup";
 import { updateRun } from "app/api/runs";
+import { SummarySection } from "./summary-section";
 
 
 
@@ -154,6 +155,15 @@ export function MainContent({
               jsonData={jsonData}
               isCompareMode={isCompareMode}
             />
+
+            <SectionDivider />
+
+            <SummarySection
+              selected={runs}
+              jsonData={jsonData}
+              isCompareMode={isCompareMode}
+            />
+
           </>
         )}
       </div>
