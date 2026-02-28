@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
@@ -5,20 +6,24 @@ import { RawSuspensionData, normalizeToPercentage, getProfileFromRun } from "app
 import { cn } from "app/lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
 
+const DYNAMIC_SAG_IDEAL_MIN = 25;
+const DYNAMIC_SAG_IDEAL_MAX = 35;
+const BOTTOM_OUT_TRAVEL_MIN = 95;
+const OFF_GROUND_TRAVEL_MAX = 5;
+
 interface SummarySectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
 }
 
-function calculateDynamicSag(
+function getNormalizedSuspensionData(
   run: Run,
   jsonData: Record<number, RunJson>,
   type: 'front' | 'rear',
-): number | null {
+): number[] | null {
   const suspensionData: RawSuspensionData[] | undefined =
     jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
-
   if (!suspensionData || suspensionData.length === 0) return null;
 
   const profile = getProfileFromRun(run);
@@ -32,16 +37,21 @@ function calculateDynamicSag(
     })
     .filter(v => isFinite(v));
 
-  if (normalized.length === 0) return null;
+  return normalized.length === 0 ? null : normalized;
+}
 
+function calculateDynamicSag(
+  run: Run,
+  jsonData: Record<number, RunJson>,
+  type: 'front' | 'rear',
+): number | null {
+  const normalized = getNormalizedSuspensionData(run, jsonData, type);
+  if (!normalized) return null;
   const sorted = [...normalized].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  const median =
-    sorted.length % 2 === 0
-      ? (sorted[mid - 1]! + sorted[mid]!) / 2
-      : sorted[mid]!;
-
-  return median;
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1]! + sorted[mid]!) / 2
+    : sorted[mid]!;
 }
 
 function calculateTravelZone(
@@ -51,23 +61,8 @@ function calculateTravelZone(
   lowerBound: number,
   upperBound: number,
 ): number | null {
-  const suspensionData: RawSuspensionData[] | undefined =
-    jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
-  if (!suspensionData || suspensionData.length === 0) return null;
-
-  const profile = getProfileFromRun(run);
-  const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
-  const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
-
-  const normalized = suspensionData
-    .map(p => {
-      const val = typeof p === 'number' ? p : Number(p.displacement ?? 0);
-      return normalizeToPercentage(val, min, max);
-    })
-    .filter(v => isFinite(v));
-
-  if (normalized.length === 0) return null;
-
+  const normalized = getNormalizedSuspensionData(run, jsonData, type);
+  if (!normalized) return null;
   const inZone = normalized.filter(v => v >= lowerBound && v <= upperBound).length;
   return (inZone / normalized.length) * 100;
 }
@@ -81,24 +76,8 @@ function calculateTravelZoneSeconds(
 ): number | null {
   const freq = type === 'front' ? run.front_freq : run.rear_freq;
   if (!freq) return null;
-
-  const suspensionData: RawSuspensionData[] | undefined =
-    jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
-  if (!suspensionData || suspensionData.length === 0) return null;
-
-  const profile = getProfileFromRun(run);
-  const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
-  const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
-
-  const normalized = suspensionData
-    .map(p => {
-      const val = typeof p === 'number' ? p : Number(p.displacement ?? 0);
-      return normalizeToPercentage(val, min, max);
-    })
-    .filter(v => isFinite(v));
-
-  if (normalized.length === 0) return null;
-
+  const normalized = getNormalizedSuspensionData(run, jsonData, type);
+  if (!normalized) return null;
   const inZone = normalized.filter(v => v >= lowerBound && v <= upperBound).length;
   return inZone / freq;
 }
@@ -112,7 +91,7 @@ function SagCell({ value, type }: SagCellProps) {
   if (value === null) return <span>—</span>;
 
   const component = type === 'front' ? 'fork' : 'shock';
-  const inRange = value >= 25 && value <= 35;
+  const inRange = value >= DYNAMIC_SAG_IDEAL_MIN && value <= DYNAMIC_SAG_IDEAL_MAX;
 
   const pillClass = cn(
     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
@@ -122,12 +101,12 @@ function SagCell({ value, type }: SagCellProps) {
   return (
     <span className={pillClass}>
       {value.toFixed(1)}%
-      {!inRange && value < 25 && (
+      {!inRange && value < DYNAMIC_SAG_IDEAL_MIN && (
         <span title={`Reduce pressure in the ${component}`}>
           <ArrowUp size={12} />
         </span>
       )}
-      {!inRange && value > 35 && (
+      {!inRange && value > DYNAMIC_SAG_IDEAL_MAX && (
         <span title={`Increase pressure in the ${component}`}>
           <ArrowDown size={12} />
         </span>
@@ -157,6 +136,78 @@ function calculateCompression(_run: Run, _jsonData: Record<number, RunJson>) {
 
 function calculateRebound(_run: Run, _jsonData: Record<number, RunJson>) {
   return 0;
+}
+
+interface RunSummaryRowProps {
+  run: Run;
+  jsonData: Record<number, RunJson>;
+}
+
+function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
+  const metrics = useMemo(() => {
+    const frontNorm = getNormalizedSuspensionData(run, jsonData, 'front');
+    const rearNorm  = getNormalizedSuspensionData(run, jsonData, 'rear');
+    const frontFreq = run.front_freq ?? null;
+    const rearFreq  = run.rear_freq  ?? null;
+
+    function zonePercent(norm: number[] | null, lo: number, hi: number) {
+      if (!norm) return null;
+      return (norm.filter(v => v >= lo && v <= hi).length / norm.length) * 100;
+    }
+    function zoneSeconds(norm: number[] | null, freq: number | null, lo: number, hi: number) {
+      if (!norm || !freq) return null;
+      return norm.filter(v => v >= lo && v <= hi).length / freq;
+    }
+    function dynamicSag(norm: number[] | null) {
+      if (!norm) return null;
+      const sorted = [...norm].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0
+        ? (sorted[mid - 1]! + sorted[mid]!) / 2
+        : sorted[mid]!;
+    }
+
+    return {
+      frontSag:          dynamicSag(frontNorm),
+      rearSag:           dynamicSag(rearNorm),
+      frontBottomOutPct: zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+      frontBottomOutSec: zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
+      frontOffGroundPct: zonePercent(frontNorm, 0, OFF_GROUND_TRAVEL_MAX),
+      frontOffGroundSec: zoneSeconds(frontNorm, frontFreq, 0, OFF_GROUND_TRAVEL_MAX),
+      rearBottomOutPct:  zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
+      rearBottomOutSec:  zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
+      rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
+      rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
+    };
+  }, [run, jsonData]);
+
+  return (
+    <tr className="border-t border-border">
+      <td className="px-3 py-2 text-foreground">{run.title || `Run ${run.id}`}</td>
+      <td className="px-3 py-2 border-l border-border">
+        <SagCell value={metrics.frontSag} type="front" />
+      </td>
+      <td className="px-3 py-2 text-foreground">{calculateCompression(run, jsonData)}</td>
+      <td className="px-3 py-2 text-foreground">{calculateRebound(run, jsonData)}</td>
+      <td className="px-3 py-2">
+        <TravelZoneCell value={metrics.frontBottomOutPct} seconds={metrics.frontBottomOutSec} />
+      </td>
+      <td className="px-3 py-2">
+        <TravelZoneCell value={metrics.frontOffGroundPct} seconds={metrics.frontOffGroundSec} />
+      </td>
+      <td className="px-3 py-2 border-l border-border">
+        <SagCell value={metrics.rearSag} type="rear" />
+      </td>
+      <td className="px-3 py-2 text-foreground">{calculateCompression(run, jsonData)}</td>
+      <td className="px-3 py-2 text-foreground">{calculateRebound(run, jsonData)}</td>
+      <td className="px-3 py-2">
+        <TravelZoneCell value={metrics.rearBottomOutPct} seconds={metrics.rearBottomOutSec} />
+      </td>
+      <td className="px-3 py-2">
+        <TravelZoneCell value={metrics.rearOffGroundPct} seconds={metrics.rearOffGroundSec} />
+      </td>
+    </tr>
+  );
 }
 
 interface SummaryTableProps {
@@ -224,53 +275,7 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
         </thead>
         <tbody>
           {selected.map((run) => (
-            <tr key={run.id} className="border-t border-border">
-              <td className="px-3 py-2 text-foreground">
-                {run.title || `Run ${run.id}`}
-              </td>
-              <td className="px-3 py-2 border-l border-border">
-                <SagCell value={calculateDynamicSag(run, jsonData, 'front')} type="front" />
-              </td>
-              <td className="px-3 py-2 text-foreground">
-                {calculateCompression(run, jsonData)}
-              </td>
-              <td className="px-3 py-2 text-foreground">
-                {calculateRebound(run, jsonData)}
-              </td>
-              <td className="px-3 py-2">
-                <TravelZoneCell
-                  value={calculateTravelZone(run, jsonData, 'front', 95, 100)}
-                  seconds={calculateTravelZoneSeconds(run, jsonData, 'front', 95, 100)}
-                />
-              </td>
-              <td className="px-3 py-2">
-                <TravelZoneCell
-                  value={calculateTravelZone(run, jsonData, 'front', 0, 5)}
-                  seconds={calculateTravelZoneSeconds(run, jsonData, 'front', 0, 5)}
-                />
-              </td>
-              <td className="px-3 py-2 border-l border-border">
-                <SagCell value={calculateDynamicSag(run, jsonData, 'rear')} type="rear" />
-              </td>
-              <td className="px-3 py-2 text-foreground">
-                {calculateCompression(run, jsonData)}
-              </td>
-              <td className="px-3 py-2 text-foreground">
-                {calculateRebound(run, jsonData)}
-              </td>
-              <td className="px-3 py-2">
-                <TravelZoneCell
-                  value={calculateTravelZone(run, jsonData, 'rear', 95, 100)}
-                  seconds={calculateTravelZoneSeconds(run, jsonData, 'rear', 95, 100)}
-                />
-              </td>
-              <td className="px-3 py-2">
-                <TravelZoneCell
-                  value={calculateTravelZone(run, jsonData, 'rear', 0, 5)}
-                  seconds={calculateTravelZoneSeconds(run, jsonData, 'rear', 0, 5)}
-                />
-              </td>
-            </tr>
+            <RunSummaryRow key={run.id} run={run} jsonData={jsonData} />
           ))}
         </tbody>
       </table>
