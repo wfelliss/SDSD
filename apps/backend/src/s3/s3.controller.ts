@@ -114,18 +114,17 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
   private getStartingValues(csv: string): [number, number] {
     const rows = csv.trim().split('\n').map(r => r.split(','));
     if (rows.length < 2) return [0, 0];
-    const frontStart = parseInt(rows[1][6], 10);
-    const rearStart = parseInt(rows[1][7], 10);
-    return [frontStart, rearStart];
+    const rearStart = parseInt(rows[1][6], 10);
+    const frontStart = parseInt(rows[1][7], 10);
+    return [rearStart, frontStart];
   }
+  
   private findMax(startValue, suspensionStroke, potentiometerStroke): number {
-    const adcPerMm = 4096 / potentiometerStroke;
+    if (!suspensionStroke || !Number.isFinite(suspensionStroke)) return 4095;
 
-    // Calculate expected end value
+    const adcPerMm = 4095 / potentiometerStroke;
     const endValue = startValue + suspensionStroke * adcPerMm;
-
-    // Clamp to valid ADC range
-    return Math.min(4096, Math.max(0, Math.round(endValue)));
+    return Math.min(4095, Math.max(0, Math.round(endValue)));
   }
   
   /**
@@ -154,7 +153,7 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
     }
     // Convert new csv into json format
     const csvContent = file.buffer.toString('utf-8');
-    const [frontStart, rearStart] = this.getStartingValues(csvContent);
+    const [rearStart, frontStart] = this.getStartingValues(csvContent);
     const front_max = this.findMax(frontStart, metadata?.front_stroke, 230);
     const back_max = this.findMax(rearStart, metadata?.rear_stroke, 80);
     const columns = this.parseCsvToColumnArrays(csvContent);
