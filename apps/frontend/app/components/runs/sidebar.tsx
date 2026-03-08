@@ -185,14 +185,14 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
       <AnimatePresence mode="wait">
         {!collapsed && (
           <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: "16rem", opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="sticky top-0 h-screen bg-slate-50 border-r border-slate-100 text-slate-800 z-40 overflow-hidden shrink-0"
+            className="bg-slate-50 border-r border-slate-100 text-slate-800 z-40 overflow-hidden fixed inset-0 md:sticky md:inset-auto md:top-0 md:h-screen md:shrink-0 md:w-64"
           >
 
-            <div className="w-64 h-full flex flex-col">
+            <div className="h-full flex flex-col w-full">
               {/* Header + title */}
               <div className="p-4 flex flex-col gap-2">
                 <div className="flex items-center gap-x-4">

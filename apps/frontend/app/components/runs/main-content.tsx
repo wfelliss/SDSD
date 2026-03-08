@@ -142,14 +142,18 @@ export function MainContent({
               onOpenComments={(r) => { setCommentsRun(r); setCommentsOpen(true); }}
             />
 
-            <DisplacementSection
-              selected={runs}
-              jsonData={jsonData}
-              isCompareMode={isCompareMode}
-            />
+            {/* Desktop only: Displacement */}
+            <div className="hidden md:block">
+              <DisplacementSection
+                selected={runs}
+                jsonData={jsonData}
+                isCompareMode={isCompareMode}
+              />
 
-            <SectionDivider />
+              <SectionDivider />
+            </div>
 
+            {/* Always visible: Histogram */}
             <HistogramSection
               selected={runs}
               jsonData={jsonData}

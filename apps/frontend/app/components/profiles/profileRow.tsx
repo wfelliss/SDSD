@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIsMobile } from "app/hooks/useIsMobile";
 import { UserIcon, ClockIcon, EditIcon, XIcon, CheckIcon, LoaderCircleIcon, ArrowRightIcon, ArrowLeftIcon } from "lucide-react";
 import { Transition } from "@headlessui/react";
 import { cn, formatDate } from "app/lib/utils";
@@ -25,6 +26,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
 
   const [editing, setEditing] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const isMobile = useIsMobile();
 
   const [profile, setProfile] = useState(initialProfile);
 
@@ -83,12 +85,12 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
           <div
             className={cn(
               "transition-[width] w-0 overflow-x-hidden relative h-full",
-              editing ? "w-15" : "group-hover:w-8"
+              editing ? "w-15" : isMobile ? "w-8" : "group-hover:w-8"
             )}
           >
             <Transition
               as="div"
-              show={hovering && !editing}
+              show={isMobile ? !editing : hovering && !editing}
               enter="transition-opacity"
               enterFrom="opacity-0"
               enterTo="opacity-100"
@@ -163,7 +165,7 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
           </div>
         </div>
       </div>
-      <div className="flex gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 flex flex-col gap-2">
           <div className="flex justify-between">
             <div className="flex gap-2 items-center">
