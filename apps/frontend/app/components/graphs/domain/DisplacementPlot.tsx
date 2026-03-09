@@ -18,10 +18,17 @@ export interface SeriesConfig {
   dynamicSag?: boolean;
 }
 
+export interface LineHighlight {
+  seriesIndex: number;
+  startIndex: number;
+  endIndex: number;
+}
+
 interface DisplacementPlotProps {
   title?: string;
   series: SeriesConfig[];
   height?: number;
+  highlight?: LineHighlight | null;
 }
 
 interface LineMetadata {
@@ -34,6 +41,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
   title = "Displacement",
   series,
   height = 300,
+  highlight,
 }) => {
   // Build plot lines for each series and optional smoothed sag overlays.
   const { chartData, lineMetadata } = useMemo(() => {
@@ -63,10 +71,35 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
     return { chartData: lines, lineMetadata: metadata };
   }, [series]);
 
+  const highlightLine = useMemo<NormalizedPoint[] | null>(() => {
+    if (!highlight) return null;
+    const seriesLine = chartData[highlight.seriesIndex];
+    if (!seriesLine || seriesLine.length === 0) return null;
+
+    const start = Math.max(
+      0,
+      Math.min(seriesLine.length - 1, highlight.startIndex),
+    );
+    const end = Math.max(
+      0,
+      Math.min(seriesLine.length - 1, highlight.endIndex),
+    );
+    if (start === end) return [seriesLine[start]!];
+
+    const sliceStart = Math.min(start, end);
+    const sliceEnd = Math.max(start, end) + 1;
+    const segment = seriesLine.slice(sliceStart, sliceEnd);
+    return segment.length > 0 ? segment : null;
+  }, [highlight, chartData]);
+
   // No chart if every generated line is empty.
   const hasAnyData = chartData.some((line) => line.length > 0);
   if (!hasAnyData) {
-    return <div className="p-4 text-gray-400 italic">No data available for {title}</div>;
+    return (
+      <div className="p-4 text-gray-400 italic">
+        No data available for {title}
+      </div>
+    );
   }
 
   return (
@@ -76,8 +109,14 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
         {/* Legend for primary series (sag overlays inherit the same color). */}
         <div className="flex gap-4 text-xs">
           {series.map((s, index) => (
-            <div key={`${s.label}-${index}`} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ background: getSeriesColor(index, s.color) }}></div>
+            <div
+              key={`${s.label}-${index}`}
+              className="flex items-center gap-2"
+            >
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ background: getSeriesColor(index, s.color) }}
+              ></div>
               <span className="font-medium text-gray-600">
                 {s.label}
                 {s.dynamicSag ? " (sag)" : ""}
@@ -89,11 +128,20 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
 
       <div className="w-full overflow-hidden">
         <LinePlot
-          data={chartData}
+          data={highlightLine ? [...chartData, highlightLine] : chartData}
           yDomain={[0, 100]}
           height={height}
           styleForSeries={(i) => {
             const meta = lineMetadata[i];
+            if (highlightLine && i === chartData.length) {
+              return {
+                stroke: "#111827",
+                strokeWidth: 3,
+                strokeDasharray: "6 4",
+                strokeLinecap: "round",
+                opacity: 0.95,
+              };
+            }
             if (!meta) {
               return {
                 stroke: getSeriesColor(i),
@@ -101,7 +149,10 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
             }
 
             return {
-              stroke: getSeriesColor(meta.seriesIndex, series[meta.seriesIndex]?.color),
+              stroke: getSeriesColor(
+                meta.seriesIndex,
+                series[meta.seriesIndex]?.color,
+              ),
               opacity: meta.isSag ? 0.35 : 1,
             };
           }}

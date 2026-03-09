@@ -27,7 +27,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const clipPathId = useId();
   const [width, setWidth] = useState(0);
-  
+
   // Persist scales for brush
   const scalesRef = useRef({
     x: d3.scaleLinear(),
@@ -69,7 +69,8 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     } else {
       const allPoints = data.flat();
       const xExtent = d3.extent(allPoints, (d) => d.x);
-      finalXDomain = xExtent[0] !== undefined ? xExtent as [number, number] : [0, 100];
+      finalXDomain =
+        xExtent[0] !== undefined ? (xExtent as [number, number]) : [0, 100];
     }
 
     // Update scales
@@ -81,46 +82,58 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     // Brushed interaction handler
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent?.type === "zoom") return;
-      
+
       const s = (event.selection as [number, number]) || x2.range();
       x.domain(s.map(x2.invert, x2));
-      
-      const lineGenerator = d3.line<DataPoint>()
+
+      const lineGenerator = d3
+        .line<DataPoint>()
         .x((d) => x(d.x))
         .y((d) => y(d.y))
         .curve(d3.curveMonotoneX);
-      
-      svg.select(".focus")
+
+      svg
+        .select(".focus")
         .selectAll<SVGPathElement, DataPoint[]>(".line-path")
         .attr("d", lineGenerator);
-      
+
       svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
     };
 
     // Clip path (scoped per component instance)
-    svg.selectAll("defs").data([null]).join("defs")
-      .selectAll("clipPath").data([null]).join("clipPath")
+    svg
+      .selectAll("defs")
+      .data([null])
+      .join("defs")
+      .selectAll("clipPath")
+      .data([null])
+      .join("clipPath")
       .attr("id", clipPathId)
-      .selectAll("rect").data([null]).join("rect")
+      .selectAll("rect")
+      .data([null])
+      .join("rect")
       .attr("width", innerWidth)
       .attr("height", innerHeight);
 
     // Focus group (main chart)
-    const focus = svg.selectAll<SVGGElement, null>(".focus")
+    const focus = svg
+      .selectAll<SVGGElement, null>(".focus")
       .data([null])
       .join("g")
       .attr("class", "focus")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Context group (brush area)
-    const context = svg.selectAll<SVGGElement, null>(".context")
+    const context = svg
+      .selectAll<SVGGElement, null>(".context")
       .data([null])
       .join("g")
       .attr("class", "context")
       .attr("transform", `translate(${margin2.left},${margin2.top})`);
 
     // Focus X Axis
-    focus.selectAll<SVGGElement, null>(".x-axis")
+    focus
+      .selectAll<SVGGElement, null>(".x-axis")
       .data([null])
       .join("g")
       .attr("class", "x-axis axis text-muted-foreground text-xs")
@@ -128,14 +141,16 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .call(d3.axisBottom(x) as d3.Axis<number>);
 
     // Focus Y Axis
-    focus.selectAll<SVGGElement, null>(".y-axis")
+    focus
+      .selectAll<SVGGElement, null>(".y-axis")
       .data([null])
       .join("g")
       .attr("class", "y-axis axis text-muted-foreground text-xs")
       .call(d3.axisLeft(y).ticks(5) as d3.Axis<number>);
 
     // Context X Axis
-    context.selectAll<SVGGElement, null>(".x-axis")
+    context
+      .selectAll<SVGGElement, null>(".x-axis")
       .data([null])
       .join("g")
       .attr("class", "x-axis axis text-muted-foreground text-xs")
@@ -143,22 +158,28 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .call(d3.axisBottom(x2) as d3.Axis<number>);
 
     // Line generators with curve smoothing
-    const lineGenerator = d3.line<DataPoint>()
+    const lineGenerator = d3
+      .line<DataPoint>()
       .x((d) => x(d.x))
       .y((d) => y(d.y))
       .curve(d3.curveMonotoneX);
-    const lineGenerator2 = d3.line<DataPoint>()
+    const lineGenerator2 = d3
+      .line<DataPoint>()
       .x((d) => x2(d.x))
       .y((d) => y2(d.y))
       .curve(d3.curveMonotoneX);
 
     // Focus lines
-    focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
+    focus
+      .selectAll<SVGPathElement, DataPoint[]>(".line-path")
       .data(data)
       .join("path")
       .attr("clip-path", `url(#${clipPathId})`)
       .attr("class", "line-path")
-      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style(
+        "stroke",
+        (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null,
+      )
       .style("opacity", (_, i) => {
         const opacity = styleForSeries?.(i)?.opacity;
         return typeof opacity === "number" ? opacity : null;
@@ -166,15 +187,27 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .style("stroke-width", (_, i) => {
         const strokeWidth = styleForSeries?.(i)?.strokeWidth;
         return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
+      .style("stroke-dasharray", (_, i) => {
+        const dash = styleForSeries?.(i)?.strokeDasharray;
+        return dash !== undefined ? dash.toString() : null;
+      })
+      .style("stroke-linecap", (_, i) => {
+        const linecap = styleForSeries?.(i)?.strokeLinecap;
+        return linecap !== undefined ? linecap.toString() : null;
       })
       .attr("d", lineGenerator);
 
     // Context lines
-    context.selectAll<SVGPathElement, DataPoint[]>(".line-context")
+    context
+      .selectAll<SVGPathElement, DataPoint[]>(".line-context")
       .data(data)
       .join("path")
       .attr("class", "line-context")
-      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style(
+        "stroke",
+        (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null,
+      )
       .style("opacity", (_, i) => {
         const opacity = styleForSeries?.(i)?.opacity;
         return typeof opacity === "number" ? opacity : null;
@@ -183,26 +216,48 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         const strokeWidth = styleForSeries?.(i)?.strokeWidth;
         return strokeWidth !== undefined ? strokeWidth.toString() : null;
       })
+      .style("stroke-dasharray", (_, i) => {
+        const dash = styleForSeries?.(i)?.strokeDasharray;
+        return dash !== undefined ? dash.toString() : null;
+      })
+      .style("stroke-linecap", (_, i) => {
+        const linecap = styleForSeries?.(i)?.strokeLinecap;
+        return linecap !== undefined ? linecap.toString() : null;
+      })
       .attr("d", lineGenerator2);
 
     // Brush
-    const brush = d3.brushX<null>()
-      .extent([[0, 0], [innerWidth, innerHeight2]])
+    const brush = d3
+      .brushX<null>()
+      .extent([
+        [0, 0],
+        [innerWidth, innerHeight2],
+      ])
       .on("brush end", brushed);
 
-    context.selectAll<SVGGElement, null>(".brush")
+    context
+      .selectAll<SVGGElement, null>(".brush")
       .data([null])
       .join("g")
       .attr("class", "brush")
       .call(brush)
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
-
   }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
 
   return (
-    <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>
-      {width > 0 && <svg ref={svgRef} width={width} height={height} className="overflow-visible" />}
+    <div
+      ref={containerRef}
+      className={`w-full bg-card rounded-lg ${className}`}
+    >
+      {width > 0 && (
+        <svg
+          ref={svgRef}
+          width={width}
+          height={height}
+          className="overflow-visible"
+        />
+      )}
     </div>
   );
 };
