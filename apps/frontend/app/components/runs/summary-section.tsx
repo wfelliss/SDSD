@@ -1,67 +1,14 @@
-import { useMemo } from 'react';
 import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
-import { RawSuspensionData, normalizeToPercentage, getProfileFromRun } from "app/lib/telemetryUtils";
 import { cn } from "app/lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
-
-const DYNAMIC_SAG_IDEAL_MIN = 25;
-const DYNAMIC_SAG_IDEAL_MAX = 35;
-const BOTTOM_OUT_TRAVEL_MIN = 95;
-const OFF_GROUND_TRAVEL_MAX = 5;
+import { useRunMetrics, DYNAMIC_SAG_IDEAL_MIN, DYNAMIC_SAG_IDEAL_MAX } from "app/hooks/useRunMetrics";
 
 interface SummarySectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
-}
-
-function getNormalizedSuspensionData(
-  run: Run,
-  jsonData: Record<number, RunJson>,
-  type: 'front' | 'rear',
-): number[] | null {
-  const suspensionData: RawSuspensionData[] | undefined =
-    jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
-  if (!suspensionData || suspensionData.length === 0) return null;
-
-  const profile = getProfileFromRun(run);
-  const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
-  const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
-
-  const normalized = suspensionData
-    .map(p => {
-      const val = typeof p === 'number' ? p : Number(p.displacement ?? 0);
-      return normalizeToPercentage(val, min, max);
-    })
-    .filter(v => isFinite(v));
-
-  return normalized.length === 0 ? null : normalized;
-}
-
-function dynamicSag(norm: number[] | null): number | null {
-  if (!norm) return null;
-  const sorted = [...norm].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0
-    ? (sorted[mid - 1]! + sorted[mid]!) / 2
-    : sorted[mid]!;
-}
-
-function zonePercent(norm: number[] | null, lo: number, hi: number): number | null {
-  if (!norm) return null;
-  return (norm.filter(v => v >= lo && v <= hi).length / norm.length) * 100;
-}
-
-function zoneSeconds(
-  norm: number[] | null,
-  freq: number | null,
-  lo: number,
-  hi: number,
-): number | null {
-  if (!norm || !freq) return null;
-  return norm.filter(v => v >= lo && v <= hi).length / freq;
 }
 
 interface SagCellProps {
@@ -112,43 +59,13 @@ function TravelZoneCell({ value, seconds }: TravelZoneCellProps) {
   return <span className={pillClass} title={tooltip}>{value.toFixed(1)}%</span>;
 }
 
-function calculateCompression(_run: Run, _jsonData: Record<number, RunJson>, _type: 'front' | 'rear') {
-  return 0;
-}
-
-function calculateRebound(_run: Run, _jsonData: Record<number, RunJson>, _type: 'front' | 'rear') {
-  return 0;
-}
-
 interface RunSummaryRowProps {
   run: Run;
   jsonData: Record<number, RunJson>;
 }
 
 function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
-  const metrics = useMemo(() => {
-    const frontNorm = getNormalizedSuspensionData(run, jsonData, 'front');
-    const rearNorm  = getNormalizedSuspensionData(run, jsonData, 'rear');
-    const frontFreq = run.front_freq ?? null;
-    const rearFreq  = run.rear_freq  ?? null;
-
-    return {
-      frontSag:          dynamicSag(frontNorm),
-      rearSag:           dynamicSag(rearNorm),
-      frontBottomOutPct: zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontBottomOutSec: zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontOffGroundPct: zonePercent(frontNorm, 0, OFF_GROUND_TRAVEL_MAX),
-      frontOffGroundSec: zoneSeconds(frontNorm, frontFreq, 0, OFF_GROUND_TRAVEL_MAX),
-      rearBottomOutPct:  zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearBottomOutSec:  zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
-      rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
-      frontCompression:  calculateCompression(run, jsonData, 'front'),
-      rearCompression:   calculateCompression(run, jsonData, 'rear'),
-      frontRebound:      calculateRebound(run, jsonData, 'front'),
-      rearRebound:       calculateRebound(run, jsonData, 'rear'),
-    };
-  }, [run, jsonData]);
+  const metrics = useRunMetrics(run, jsonData);
 
   return (
     <tr className="border-t border-border">
@@ -259,29 +176,7 @@ interface MobileRunSummaryRowProps {
 }
 
 function MobileRunSummaryRow({ run, jsonData, type }: MobileRunSummaryRowProps) {
-  const metrics = useMemo(() => {
-    const frontNorm = getNormalizedSuspensionData(run, jsonData, 'front');
-    const rearNorm  = getNormalizedSuspensionData(run, jsonData, 'rear');
-    const frontFreq = run.front_freq ?? null;
-    const rearFreq  = run.rear_freq  ?? null;
-
-    return {
-      frontSag:          dynamicSag(frontNorm),
-      rearSag:           dynamicSag(rearNorm),
-      frontBottomOutPct: zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontBottomOutSec: zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontOffGroundPct: zonePercent(frontNorm, 0, OFF_GROUND_TRAVEL_MAX),
-      frontOffGroundSec: zoneSeconds(frontNorm, frontFreq, 0, OFF_GROUND_TRAVEL_MAX),
-      rearBottomOutPct:  zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearBottomOutSec:  zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
-      rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
-      frontCompression:  calculateCompression(run, jsonData, 'front'),
-      rearCompression:   calculateCompression(run, jsonData, 'rear'),
-      frontRebound:      calculateRebound(run, jsonData, 'front'),
-      rearRebound:       calculateRebound(run, jsonData, 'rear'),
-    };
-  }, [run, jsonData]);
+  const metrics = useRunMetrics(run, jsonData);
 
   const isFork = type === 'fork';
 

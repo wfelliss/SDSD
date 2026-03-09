@@ -29,7 +29,7 @@ export default function ProfilesPage() {
   );
 
   return (
-    <div className="flex flex-col items-center pt-20">
+    <div className="flex flex-col items-center pt-20 px-4 md:px-8">
       <div className="flex flex-col gap-4 max-w-4xl w-full">
         <div className="flex flex-col">
           <h1 className="text-text-primary font-semibold">Profiles</h1>

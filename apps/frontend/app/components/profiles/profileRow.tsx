@@ -68,14 +68,14 @@ export function ProfileRow({ profile: initialProfile, onProfileChange }: Profile
 
   return (
     <li
-      className="p-4 flex flex-col gap-2 transition-all group"
+      className="px-6 py-5 flex flex-col gap-3 transition-all group"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
       <div className="flex justify-between">
-        <div className="flex gap-2 items-center capitalize text-text-primary">
-          <UserIcon className="size-4 text-text-secondary" />
-          <p className="font-semibold">{profile.name}</p>
+        <div className="flex gap-2 items-center capitalize text-text-primary min-w-0">
+          <UserIcon className="size-4 shrink-0 text-text-secondary" />
+          <p className="font-semibold truncate">{profile.name}</p>
         </div>
         <div className="flex items-center">
           <div className="flex gap-2 text-text-secondary items-center">
