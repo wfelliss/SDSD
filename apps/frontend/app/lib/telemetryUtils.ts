@@ -128,3 +128,55 @@ export function calculateMovingAverage(
 
   return result;
 }
+
+/**
+ * Largest-Triangle-Three-Buckets downsampling.
+ * Reduces `data` to at most `threshold` points.
+ * Returns the original array unchanged if data.length <= threshold.
+ */
+export function lttbDownsample<T extends { x: number; y: number }>(
+  data: T[],
+  threshold: number,
+): T[] {
+  if (data.length === 0) return data;
+  if (threshold < 2) return data.length <= 1 ? data : [data[0]!, data[data.length - 1]!];
+  if (data.length <= threshold) return data;
+
+  const sampled: T[] = [];
+  sampled.push(data[0]!);
+
+  const bucketCount = threshold - 2;
+  const bucketSize = (data.length - 2) / bucketCount;
+  let a = 0;
+
+  for (let i = 0; i < bucketCount; i++) {
+    const bucketStart = Math.floor(i * bucketSize) + 1;
+    const bucketEnd   = Math.min(Math.floor((i + 1) * bucketSize) + 1, data.length - 1);
+
+    const nextStart = bucketEnd;
+    const nextEnd   = Math.min(Math.floor((i + 2) * bucketSize) + 1, data.length - 1);
+    let avgX = 0, avgY = 0;
+    const nextLen = nextEnd - nextStart;
+    if (nextLen > 0) {
+      for (let j = nextStart; j < nextEnd; j++) { avgX += data[j]!.x; avgY += data[j]!.y; }
+      avgX /= nextLen; avgY /= nextLen;
+    } else {
+      avgX = data[data.length - 1]!.x; avgY = data[data.length - 1]!.y;
+    }
+
+    const pointA = data[a]!;
+    let maxArea = -1, maxIndex = bucketStart;
+    for (let j = bucketStart; j < bucketEnd; j++) {
+      const area = Math.abs(
+        (pointA.x - avgX) * (data[j]!.y - pointA.y) -
+        (pointA.x - data[j]!.x) * (avgY - pointA.y),
+      );
+      if (area > maxArea) { maxArea = area; maxIndex = j; }
+    }
+    sampled.push(data[maxIndex]!);
+    a = maxIndex;
+  }
+
+  sampled.push(data[data.length - 1]!);
+  return sampled;
+}
