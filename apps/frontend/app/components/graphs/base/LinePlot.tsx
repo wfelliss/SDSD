@@ -34,7 +34,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   const latestDomainRef = useRef<[number, number] | null>(null);
   const selectedDomainRef = useRef<[number, number] | null>(null);
 
-  // Threashold for downsampling 
+  // Threshold for downsampling 
   const downsampleThreshold = Math.max(500, Math.floor(innerWidthForDownsample));
   const focusData = useMemo(
     () => data.map((series) => lttbDownsample(series, downsampleThreshold)),
