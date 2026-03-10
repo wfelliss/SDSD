@@ -16,6 +16,16 @@ export class UsersService {
     return result[0] || null;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+  
+    return result[0] || null;
+  }
+
+
   async create(
     userData: Omit<NewUser, "createdAt" | "updatedAt">
   ): Promise<User> {

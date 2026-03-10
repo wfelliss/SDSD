@@ -20,7 +20,9 @@ describe('RunsController', () => {
           },
         },
       ],
-    }).compile();
+    }).overrideGuard(JwtAuthGuard)
+    .useValue({ canActivate: () => true })
+    .compile();
 
     controller = module.get<RunsController>(RunsController);
     // Cast to jest.Mocked to get access to .mockResolvedValue and other mock methods

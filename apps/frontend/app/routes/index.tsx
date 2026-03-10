@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sidebar } from "../components/runs/sidebar";
 import { MainContent } from "app/components/runs/main-content";
@@ -6,6 +6,7 @@ import { RunJson } from "app/types/runs";
 import { getFile } from "app/api/s3";
 import { getRuns } from "app/api/runs";
 import { Run } from "@repo/database";
+import { getCurrentUser } from "app/api/auth";
 
 // ---------- Loader ----------
 export const loader = async () => {
@@ -16,12 +17,28 @@ export const loader = async () => {
 // ---------------------- MAIN PAGE COMPONENT ----------------------
 export default function Runs() {
   const { runs } = useLoaderData<typeof loader>();
+  const navigate = useNavigate();
+
   const [selected, setSelected] = useState<Run[]>([]);
   const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingJson, setLoadingJson] = useState(false);
 
   const isCompareMode = selected.length > 1;
 
+  // ----------------- Auth check -----------------
+  useEffect(() => {
+    console.log("Checking auth…");
+    async function checkAuth() {
+      try {
+        await getCurrentUser(); 
+      } catch {
+        navigate("/login");
+      }
+    }
+    checkAuth();
+  }, [navigate]);
+
+  // ----------------- Fetch JSON for selected runs -----------------
   useEffect(() => {
     const fetchJson = async (run: Run) => {
       setLoadingJson(true);

@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import { profiles, runs, users } from "../src/schema";
+import bcrypt from "bcryptjs";
 
 async function seed() {
   const connectionString =
@@ -11,6 +12,19 @@ async function seed() {
   const db = drizzle(client);
 
   console.log("🌱 Seeding database...");
+
+  const passwordHash = await bcrypt.hash("password123", 10);
+
+  await db.insert(users)
+    .values({
+      name: "Test User",
+      email: "test@test.com",
+      password_hash: passwordHash,
+      bio: "Seeded user",
+    })
+    .onConflictDoNothing();
+
+  console.log("✅ User seeded");
 
   const initialProfiles = [
     {
