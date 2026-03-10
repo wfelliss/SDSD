@@ -25,7 +25,6 @@ export default function Login() {
         return;
       }
 
-      console.log("LOGIN RESPONSE:", data);
       localStorage.setItem("token", data.access_token);
       navigate("/");
     } catch (err) {
