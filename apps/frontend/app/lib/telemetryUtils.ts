@@ -139,7 +139,7 @@ export function lttbDownsample<T extends { x: number; y: number }>(
   threshold: number,
 ): T[] {
   if (data.length === 0) return data;
-  if (threshold < 2) return data.length <= 1 ? data : [data[0]!, data[data.length - 1]!];
+  if (threshold < 2) return threshold > 0 ? [data[0]!] : [];
   if (data.length <= threshold) return data;
 
   const sampled: T[] = [];
