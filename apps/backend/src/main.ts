@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { BunErrorFilter } from "./bun-error.filter";
 import { ValidationPipe } from "@nestjs/common/pipes/validation.pipe";
+import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,6 +19,8 @@ async function bootstrap() {
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
     credentials: true,
   });
+
+  app.use(cookieParser());
 
   // Set global prefix for all routes
   app.setGlobalPrefix("api");
