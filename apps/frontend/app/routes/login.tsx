@@ -17,17 +17,16 @@ export default function Login() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        const data = await res.json();
         setError(data.message || "Invalid credentials");
         return;
       }
 
-      localStorage.setItem("token", data.access_token);
       navigate("/");
     } catch (err) {
       setError("Login failed. Try again.");

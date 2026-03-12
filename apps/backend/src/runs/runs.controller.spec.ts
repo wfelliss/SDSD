@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RunsController } from './runs.controller';
 import { RunsService } from './runs.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 describe('RunsController', () => {
   let controller: RunsController;
@@ -20,7 +21,7 @@ describe('RunsController', () => {
           },
         },
       ],
-    }).overrideGuard(JwtAuthGuard)
+    }).overrideGuard(AuthGuard)
     .useValue({ canActivate: () => true })
     .compile();
 
