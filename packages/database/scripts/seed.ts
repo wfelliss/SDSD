@@ -13,7 +13,9 @@ async function seed() {
 
   console.log("🌱 Seeding database...");
 
-  const passwordHash = await bcrypt.hash("wharncliffe-sd-squared", 10);
+  const password = process.env.SEED_ADMIN_PASSWORD || "password123";
+
+  const passwordHash = await bcrypt.hash(password, 10);
 
   await db.insert(users)
     .values({
