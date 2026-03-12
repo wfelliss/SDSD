@@ -13,14 +13,14 @@ async function seed() {
 
   console.log("🌱 Seeding database...");
 
-  const passwordHash = await bcrypt.hash("password123", 10);
+  const passwordHash = await bcrypt.hash("wharncliffe-sd-squared", 10);
 
   await db.insert(users)
     .values({
-      name: "Test User",
-      email: "test@test.com",
+      name: "Admin SD^2",
+      email: "admin@sd-squared.co.uk",
       password_hash: passwordHash,
-      bio: "Seeded user",
+      bio: "Seeded admin",
     })
     .onConflictDoNothing();
 
