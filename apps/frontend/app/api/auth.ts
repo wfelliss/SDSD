@@ -1,11 +1,6 @@
+import { apiClient } from "app/api/client";
+
 export async function getCurrentUser() {
-  const res = await fetch("/api/auth/me", {
-    credentials: "include",
-  });
-
-  if (!res.ok) {
-    throw new Error("Unauthorized");
-  }
-
-  return res.json();
+  const res = await apiClient.get("/auth/me");
+  return res.data;
 }

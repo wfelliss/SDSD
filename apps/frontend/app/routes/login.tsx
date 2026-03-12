@@ -1,5 +1,7 @@
+import { isAxiosError } from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiClient } from "app/api/client";
 
 const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1.5' cy='1.5' r='1.5' fill='hsl(216%2C100%25%2C50%25)' fill-opacity='0.18'/%3E%3C/svg%3E")`;
 
@@ -14,22 +16,14 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || "Invalid credentials");
-        return;
-      }
-
+      await apiClient.post("/auth/login", { email, password });
       navigate("/");
     } catch (err) {
-      setError("Login failed. Try again.");
+      if (isAxiosError(err)) {
+        setError(err.response?.data?.message || "Invalid credentials");
+      } else {
+        setError("Login failed. Try again.");
+      }
     }
   };
 
