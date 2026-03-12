@@ -5,31 +5,14 @@ import {
 } from "app/components/graphs/domain/DisplacementPlot";
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
-import { Profile, Run } from "@repo/database";
+import { Run } from "@repo/database";
 import { getSeriesColor } from "app/lib/graphColors";
+import { getProfileFromRun } from "app/lib/telemetryUtils";
 
 interface ChartSectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
-}
-
-// Extract profile object
-function getProfileFromRun(run: Run): Profile | null {
-  const profileCandidate = (run as Run & { profile?: unknown }).profile;
-
-  if (
-    !profileCandidate ||
-    typeof profileCandidate !== "object" ||
-    !("front_min" in profileCandidate) ||
-    !("front_max" in profileCandidate) ||
-    !("back_min" in profileCandidate) ||
-    !("back_max" in profileCandidate)
-  ) {
-    return null;
-  }
-
-  return profileCandidate as Profile;
 }
 
 function getSeriesConfig(

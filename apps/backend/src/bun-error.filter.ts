@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, Logger, HttpException } from '@nestjs/common';
 
 @Catch()
 export class BunErrorFilter implements ExceptionFilter {
@@ -7,6 +7,16 @@ export class BunErrorFilter implements ExceptionFilter {
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
+
+    // HttpExceptions (401, 403, 404, etc.) are expected application-level responses,
+    // not infrastructure failures. Return their correct status code and body so the
+    // client can handle them properly (e.g. redirect to /login on 401).
+    if (exception instanceof HttpException) {
+      response
+        .status(exception.getStatus())
+        .json(exception.getResponse());
+      return;
+    }
 
     // 🔍 UNWRAP BUN AGGREGATE ERRORS
     if (exception instanceof AggregateError || exception.name === 'AggregateError') {
