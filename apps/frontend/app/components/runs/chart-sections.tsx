@@ -6,20 +6,24 @@ import {
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
+import { getSeriesColor } from "app/lib/graphColors";
+import { getProfileFromRun } from "app/lib/telemetryUtils";
+
 interface ChartSectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
 }
 
-// ---------------------- Chart Data Formatter ----------------------
 function getSeriesConfig(
   run: Run,
   index: number,
   jsonData: Record<number, RunJson>,
   type: "front" | "rear",
-  customLabel?: string
+  customLabel?: string,
+  dynamicSag?: boolean,
 ): SeriesConfig {
+  // Resolve telemetry source and frequency
   const data = jsonData[run.id];
   const isError = !data || data.error;
   const rawData = isError
@@ -32,8 +36,9 @@ function getSeriesConfig(
     : type === "front"
       ? run.front_freq || 100
       : run.rear_freq || 100;
-  // Attempt to read profile ranges if the backend included the profile relation
-  const profile = (run as any).profile ?? (run as any).profile_id ?? null;
+
+  // Apply rider profile min/max range
+  const profile = getProfileFromRun(run);
   const min = profile
     ? type === "front"
       ? profile.front_min
@@ -45,13 +50,15 @@ function getSeriesConfig(
       : profile.back_max
     : undefined;
 
+  // Build unified series config for displacement rendering
   return {
-    label: customLabel || run.title || `Run ${run.id}`,
-    color: index === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-2))",
+    label: customLabel ?? run.title ?? `Run ${run.id}`,
+    color: getSeriesColor(index),
     rawData,
     freq,
     min,
     max,
+    dynamicSag,
   };
 }
 
@@ -66,50 +73,35 @@ export function DisplacementSection({
   }
 
   const first = selected[0];
-  const second = selected[1] || null;
   const firstData = jsonData[first.id];
-  const secondData = second ? jsonData[second.id] : null;
 
   return (
     <section>
       <SectionHeader>Displacement Plot</SectionHeader>
 
-      {isCompareMode ? ( // Compare mode
+      {isCompareMode ? (
         <div className="grid grid-cols-1 gap-6 w-full">
           <DisplacementPlot
             title="Front Fork Comparison"
-            dynamicSag={{
-              front: firstData?.data?.suspension?.front_sus,
-              rear: secondData?.data?.suspension?.front_sus,
-            }}
             series={selected.map((run, i) =>
-              getSeriesConfig(run, i, jsonData, "front")
+              getSeriesConfig(run, i, jsonData, "front", undefined, true)
             )}
           />
           <DisplacementPlot
             title="Rear Shock Comparison"
-            dynamicSag={{
-              front: firstData?.data?.suspension?.rear_sus,
-              rear: secondData?.data?.suspension?.rear_sus,
-            }}
             series={selected.map((run, i) =>
-              getSeriesConfig(run, i, jsonData, "rear")
+              getSeriesConfig(run, i, jsonData, "rear", undefined, true)
             )}
           />
         </div>
       ) : (
-        // Single mode
         firstData &&
         !firstData.error && (
           <DisplacementPlot
             title="Suspension Displacement"
-            dynamicSag={{
-              front: firstData.data.suspension.front_sus,
-              rear: firstData.data.suspension.rear_sus,
-            }}
             series={[
-              getSeriesConfig(first, 0, jsonData, "front", "Front Fork"),
-              getSeriesConfig(first, 1, jsonData, "rear", "Rear Shock"),
+              getSeriesConfig(first, 0, jsonData, "front", "Front Fork", true),
+              getSeriesConfig(first, 1, jsonData, "rear", "Rear Shock", true),
             ]}
           />
         )
@@ -124,58 +116,97 @@ export function HistogramSection({
   jsonData,
   isCompareMode,
 }: ChartSectionProps) {
-  const renderHistogram = (run: Run, index: number, type: "front" | "rear") => {
-    const data = jsonData[run.id];
-    if (!data || data.error) return null;
+  const buildSeries = (type: "front" | "rear") => {
+    return selected
+      .map((run, runIndex) => {
+        const data = jsonData[run.id];
+        if (!data || data.error) {
+          return null;
+        }
 
-    // Data
-    const rawData =
-      type === "front"
-        ? data.data.suspension.front_sus
-        : data.data.suspension.rear_sus;
-    const profile = (run as any).profile ?? null;
-    const min = profile
-      ? type === "front"
-        ? profile.front_min
-        : profile.back_min
-      : undefined;
-    const max = profile
-      ? type === "front"
-        ? profile.front_max
-        : profile.back_max
-      : undefined;
+        const profile = getProfileFromRun(run);
+        const min =
+          type === "front"
+            ? profile?.front_min
+            : profile?.back_min;
+        const max =
+          type === "front"
+            ? profile?.front_max
+            : profile?.back_max;
 
-    // Color
-    const isChart2 = isCompareMode ? index === 1 : type === "rear";
-    const colorVar = isChart2 ? "chart-2" : "chart-1";
+        return {
+          label: run.title ?? `Run ${run.id}`,
+          rawData:
+            type === "front"
+              ? data.data.suspension.front_sus
+              : data.data.suspension.rear_sus,
+          fillColor: getSeriesColor(runIndex),
+          min,
+          max,
+        };
+      })
+      .filter((seriesItem): seriesItem is NonNullable<typeof seriesItem> => Boolean(seriesItem));
+  };
+
+  const frontSeries = buildSeries("front");
+  const rearSeries = buildSeries("rear");
+
+  if (selected.length === 1 && !isCompareMode) {
+    const singleRun = selected[0];
+    if (!singleRun) {
+      return null;
+    }
+
+    const data = jsonData[singleRun.id];
+    if (!data || data.error) {
+      return (
+        <section>
+          <SectionHeader>Travel Histogram</SectionHeader>
+          <div className="p-4 text-gray-400 italic">No histogram data available</div>
+        </section>
+      );
+    }
 
     return (
-      <TravelHistogram
-        key={`${type}-${run.id}`}
-        title={
-          isCompareMode
-            ? `${type === "front" ? "Front" : "Rear"}: ${run.title}`
-            : `${type === "front" ? "Front" : "Rear"} Travel`
-        }
-        rawData={rawData}
-        min={min}
-        max={max}
-        colorClass={`fill-${colorVar}`}
-        hoverColorClass={`fill-${colorVar}-hover`}
-      />
+      <section>
+        <SectionHeader>Travel Histogram</SectionHeader>
+        <div className="w-1/2">
+          <TravelHistogram
+            title="Suspension Travel"
+            series={[
+              {
+                label: "Front Fork",
+                rawData: frontSeries[0]?.rawData ?? [],
+                fillColor: getSeriesColor(0),
+                min: frontSeries[0]?.min,
+                max: frontSeries[0]?.max,
+              },
+              {
+                label: "Rear Shock",
+                rawData: rearSeries[0]?.rawData ?? [],
+                fillColor: getSeriesColor(1),
+                min: rearSeries[0]?.min,
+                max: rearSeries[0]?.max,
+              },
+            ]}
+          />
+        </div>
+      </section>
     );
-  };
+  }
 
   return (
     <section>
       <SectionHeader>Travel Histogram</SectionHeader>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-        <div className="space-y-4">
-          {selected.map((run, i) => renderHistogram(run, i, "front"))}
-        </div>
-        <div className="space-y-4">
-          {selected.map((run, i) => renderHistogram(run, i, "rear"))}
-        </div>
+      <div className="grid grid-cols-2 gap-6 w-full">
+        <TravelHistogram
+          title="Front Fork Comparison"
+          series={frontSeries}
+        />
+        <TravelHistogram
+          title="Rear Shock Comparison"
+          series={rearSeries}
+        />
       </div>
     </section>
   );
