@@ -10,10 +10,9 @@ export class ApiKeyService {
     const expectedKey = this.configService.get<string>('ESP32_API_KEY');
     if (!expectedKey || !providedKey) return false;
 
-    const expected = Buffer.from(expectedKey);
-    const provided = Buffer.from(providedKey);
-    if (expected.length !== provided.length) return false;
+    const expectedKeyHash = crypto.createHash('sha256').update(expectedKey).digest();
+    const providedKeyHash = crypto.createHash('sha256').update(providedKey).digest();
 
-    return crypto.timingSafeEqual(expected, provided);
+    return crypto.timingSafeEqual(expectedKeyHash, providedKeyHash);
   }
 }
