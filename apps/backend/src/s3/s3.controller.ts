@@ -6,6 +6,7 @@ import { RunsService } from '../runs/runs.service';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
+import { Public } from 'src/auth/decorator';
 
 @Controller('s3')
 export class S3Controller {
@@ -131,6 +132,7 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
    */
+  @Public()
   @Post('newRunFile')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
   async newRunFile(
