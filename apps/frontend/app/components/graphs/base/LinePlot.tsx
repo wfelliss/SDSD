@@ -28,16 +28,14 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const clipPathId = useId();
   const [width, setWidth] = useState(0);
-<<<<<<< HEAD
 
-=======
   const innerWidthForDownsample = Math.max(0, width);
   const fullDataRef = useRef<DataPoint[][]>([]);
   const rafRef = useRef<number | null>(null);
   const latestDomainRef = useRef<[number, number] | null>(null);
   const selectedDomainRef = useRef<[number, number] | null>(null);
 
-  // Threshold for downsampling 
+  // Threshold for downsampling
   const downsampleThreshold = Math.max(500, Math.floor(innerWidthForDownsample));
   const focusData = useMemo(
     () => data.map((series) => lttbDownsample(series, downsampleThreshold)),
@@ -47,8 +45,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     () => data.map((series) => lttbDownsample(series, 500)),
     [data],
   );
-  
->>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
+
   // Persist scales for brush
   const scalesRef = useRef({
     x: d3.scaleLinear(),
@@ -124,24 +121,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     // Brushed interaction handler
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent?.type === "zoom") return;
-<<<<<<< HEAD
 
-      const s = (event.selection as [number, number]) || x2.range();
-      x.domain(s.map(x2.invert, x2));
-
-      const lineGenerator = d3
-        .line<DataPoint>()
-        .x((d) => x(d.x))
-        .y((d) => y(d.y))
-        .curve(d3.curveMonotoneX);
-
-      svg
-        .select(".focus")
-        .selectAll<SVGPathElement, DataPoint[]>(".line-path")
-        .attr("d", lineGenerator);
-
-      svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
-=======
       if (event.selection) {
         latestDomainRef.current = (event.selection as [number, number]).map(x2.invert, x2) as [number, number];
       } else {
@@ -169,7 +149,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 
         svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
       });
->>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
+
     };
 
     // Clip path (scoped per component instance)
@@ -242,14 +222,9 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .curve(d3.curveMonotoneX);
 
     // Focus lines
-<<<<<<< HEAD
-    focus
-      .selectAll<SVGPathElement, DataPoint[]>(".line-path")
-      .data(data)
-=======
+
     focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
       .data(buildVisibleData(selectedDomainRef.current))
->>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
       .join("path")
       .attr("clip-path", `url(#${clipPathId})`)
       .attr("class", "line-path")
@@ -276,14 +251,8 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("d", lineGenerator);
 
     // Context lines
-<<<<<<< HEAD
-    context
-      .selectAll<SVGPathElement, DataPoint[]>(".line-context")
-      .data(data)
-=======
     context.selectAll<SVGPathElement, DataPoint[]>(".line-context")
       .data(contextData)
->>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
       .join("path")
       .attr("class", "line-context")
       .style(
@@ -325,11 +294,8 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .call(brush)
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
-<<<<<<< HEAD
-  }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
-=======
 
-    // Keep brush UI in sync 
+    // Keep brush UI in sync
     context.select<SVGGElement>(".brush").call(
       brush.move,
       selectedDomainRef.current
@@ -345,7 +311,6 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     };
 
   }, [focusData, contextData, width, height, xDomain, yDomain, styleForSeries, clipPathId, downsampleThreshold]);
->>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
 
   return (
     <div
