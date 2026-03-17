@@ -200,6 +200,12 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
                   <h1 className="text-l font-bold tracking-tight text-text-primary whitespace-nowrap">
                     Telemetry System
                   </h1>
+                  <button
+                    onClick={() => setCollapsed(true)}
+                    className="ml-auto p-2 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors md:hidden"
+                  >
+                    <ArrowLeft className="size-4" />
+                  </button>
                 </div>
                 <h1 className="font-semibold text-xl text-slate-700 whitespace-nowrap">Select runs to compare</h1>
                 <h2 className="text-sm text-slate-500 whitespace-nowrap">You can compare up to 2 runs</h2>
@@ -260,7 +266,7 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={() => setCollapsed(false)}
-            className="fixed bottom-4 left-4 p-3 bg-slate-800 text-white rounded-full hover:bg-slate-700 z-50 shadow-lg"
+            className="fixed top-4 left-4 p-3 bg-slate-800 text-white rounded-full hover:bg-slate-700 z-50 shadow-lg"
           >
             <ArrowRight className="size-4" />
           </motion.button>
