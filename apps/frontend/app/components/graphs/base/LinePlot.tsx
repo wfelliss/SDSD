@@ -1,5 +1,6 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
+import { lttbDownsample } from "../../../lib/telemetryUtils";
 
 export interface DataPoint {
   x: number;
@@ -27,7 +28,27 @@ export const LinePlot: React.FC<LinePlotProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const clipPathId = useId();
   const [width, setWidth] = useState(0);
+<<<<<<< HEAD
 
+=======
+  const innerWidthForDownsample = Math.max(0, width);
+  const fullDataRef = useRef<DataPoint[][]>([]);
+  const rafRef = useRef<number | null>(null);
+  const latestDomainRef = useRef<[number, number] | null>(null);
+  const selectedDomainRef = useRef<[number, number] | null>(null);
+
+  // Threshold for downsampling 
+  const downsampleThreshold = Math.max(500, Math.floor(innerWidthForDownsample));
+  const focusData = useMemo(
+    () => data.map((series) => lttbDownsample(series, downsampleThreshold)),
+    [data, downsampleThreshold],
+  );
+  const contextData = useMemo(
+    () => data.map((series) => lttbDownsample(series, 500)),
+    [data],
+  );
+  
+>>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
   // Persist scales for brush
   const scalesRef = useRef({
     x: d3.scaleLinear(),
@@ -47,9 +68,13 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     return () => resizeObserver.disconnect();
   }, []);
 
+  useEffect(() => {
+    fullDataRef.current = data;
+  }, [data]);
+
   // Main D3 rendering logic
   useEffect(() => {
-    if (!svgRef.current || data.length === 0 || width === 0) return;
+    if (!svgRef.current || focusData.length === 0 || width === 0) return;
 
     const svg = d3.select(svgRef.current);
     const { x, y, x2 } = scalesRef.current;
@@ -67,7 +92,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     if (xDomain) {
       finalXDomain = xDomain;
     } else {
-      const allPoints = data.flat();
+      const allPoints = focusData.flat();
       const xExtent = d3.extent(allPoints, (d) => d.x);
       finalXDomain =
         xExtent[0] !== undefined ? (xExtent as [number, number]) : [0, 100];
@@ -79,9 +104,27 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     x2.range([0, innerWidth]).domain(finalXDomain);
     const y2 = d3.scaleLinear().range([innerHeight2, 0]).domain(yDomain);
 
+    const bisectLeft = d3.bisector<DataPoint, number>((d) => d.x).left;
+    const bisectRight = d3.bisector<DataPoint, number>((d) => d.x).right;
+
+    const buildVisibleData = (domain: [number, number] | null) => {
+      if (!domain) return focusData;
+      const [xMin, xMax] = domain;
+      return fullDataRef.current.map((series) => {
+        if (series.length === 0) return series;
+        const start = bisectLeft(series, xMin);
+        const end = bisectRight(series, xMax);
+        return lttbDownsample(series.slice(start, end), downsampleThreshold);
+      });
+    };
+
+    const activeDomain = selectedDomainRef.current ?? finalXDomain;
+    x.domain(activeDomain);
+
     // Brushed interaction handler
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent?.type === "zoom") return;
+<<<<<<< HEAD
 
       const s = (event.selection as [number, number]) || x2.range();
       x.domain(s.map(x2.invert, x2));
@@ -98,6 +141,35 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         .attr("d", lineGenerator);
 
       svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
+=======
+      if (event.selection) {
+        latestDomainRef.current = (event.selection as [number, number]).map(x2.invert, x2) as [number, number];
+      } else {
+        latestDomainRef.current = null;
+      }
+      if (rafRef.current !== null) return;
+
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        selectedDomainRef.current = latestDomainRef.current;
+        const nextDomain = selectedDomainRef.current ?? finalXDomain;
+        x.domain(nextDomain);
+
+        const visibleData = buildVisibleData(selectedDomainRef.current);
+
+        const lineGenerator = d3.line<DataPoint>()
+          .x((d) => x(d.x))
+          .y((d) => y(d.y))
+          .curve(d3.curveMonotoneX);
+
+        svg.select(".focus")
+          .selectAll<SVGPathElement, DataPoint[]>(".line-path")
+          .data(visibleData)
+          .attr("d", lineGenerator);
+
+        svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
+      });
+>>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
     };
 
     // Clip path (scoped per component instance)
@@ -170,9 +242,14 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .curve(d3.curveMonotoneX);
 
     // Focus lines
+<<<<<<< HEAD
     focus
       .selectAll<SVGPathElement, DataPoint[]>(".line-path")
       .data(data)
+=======
+    focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
+      .data(buildVisibleData(selectedDomainRef.current))
+>>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
       .join("path")
       .attr("clip-path", `url(#${clipPathId})`)
       .attr("class", "line-path")
@@ -199,9 +276,14 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("d", lineGenerator);
 
     // Context lines
+<<<<<<< HEAD
     context
       .selectAll<SVGPathElement, DataPoint[]>(".line-context")
       .data(data)
+=======
+    context.selectAll<SVGPathElement, DataPoint[]>(".line-context")
+      .data(contextData)
+>>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
       .join("path")
       .attr("class", "line-context")
       .style(
@@ -243,7 +325,27 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .call(brush)
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
+<<<<<<< HEAD
   }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
+=======
+
+    // Keep brush UI in sync 
+    context.select<SVGGElement>(".brush").call(
+      brush.move,
+      selectedDomainRef.current
+        ? (selectedDomainRef.current.map(x2) as [number, number])
+        : null,
+    );
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+
+  }, [focusData, contextData, width, height, xDomain, yDomain, styleForSeries, clipPathId, downsampleThreshold]);
+>>>>>>> 93e7f03d0a48e78cd69ee50f7369b258447121f8
 
   return (
     <div
