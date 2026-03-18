@@ -7,8 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiKeyAuth } from 'src/auth/decorator';
 import * as multer from 'multer';
-import { Public } from 'src/auth/decorator';
-
 @Controller('s3')
 export class S3Controller {
   constructor(
