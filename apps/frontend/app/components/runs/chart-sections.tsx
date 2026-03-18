@@ -170,7 +170,7 @@ export function HistogramSection({
     return (
       <section>
         <SectionHeader>Travel Histogram</SectionHeader>
-        <div className="w-1/2">
+        <div className="w-full md:w-1/2">
           <TravelHistogram
             title="Suspension Travel"
             series={[
@@ -198,7 +198,7 @@ export function HistogramSection({
   return (
     <section>
       <SectionHeader>Travel Histogram</SectionHeader>
-      <div className="grid grid-cols-2 gap-6 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
         <TravelHistogram
           title="Front Fork Comparison"
           series={frontSeries}

@@ -32,7 +32,7 @@ export default function Login() {
       className="min-h-screen flex items-center justify-center bg-zinc-100"
       style={{ backgroundImage: DOT_PATTERN }}
     >
-      <div className="w-full max-w-sm mx-4">
+      <div className="w-[90%] mx-auto md:max-w-sm">
         {/* Card */}
         <div className="bg-zinc-50 rounded-2xl shadow-xl overflow-hidden">
           {/* Top accent bar — blue + orange gradient matching chart colours */}

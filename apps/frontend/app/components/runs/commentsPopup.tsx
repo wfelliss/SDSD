@@ -54,7 +54,7 @@ export const CommentsPopup = ({ isOpen, onClose, comments, title, runId = null, 
         onClick={onClose}
       />
 
-      <div className="relative z-10 w-full max-w-2xl rounded bg-white p-6 shadow-xl">
+      <div className="relative z-10 w-full max-w-2xl mx-4 rounded bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between">
           <h2 className="mb-2 text-lg font-semibold">Comments{title ? ` — ${title}` : ""}</h2>
           <div className="flex items-center gap-2">
