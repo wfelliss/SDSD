@@ -28,7 +28,7 @@ interface SuspensionActivity extends VelocityReading {
   type: "rebound" | "compression"
 }
 
-function convertToMillis(reading: RawReading, suspensionLength: number, min: number, max: number): Reading {
+function convertDisplacementToMm(reading: RawReading, suspensionLength: number, min: number, max: number): Reading {
 
   const displacementPercentage = (reading.displacement - min) / (max - min)
   const displacementInMilis = suspensionLength * displacementPercentage
@@ -59,9 +59,9 @@ export function processCompressions(
 
   const dataStandardized: RawReading[] = standardizeData(data, freq).map(point => ({ displacement: point.val, time: point.time }))
 
-  const dataInMillis: Reading[] = dataStandardized.map((rawReading) => convertToMillis(rawReading, length, min, max))
+  const dataInMm: Reading[] = dataStandardized.map((rawReading) => convertDisplacementToMm(rawReading, length, min, max))
 
-  const velocities = dataInMillis.slice(0, -1).map((reading, i) => displacementToVelocity(reading, dataInMillis[i + 1]!))
+  const velocities = dataInMm.slice(0, -1).map((reading, i) => displacementToVelocity(reading, dataInMm[i + 1]!))
 
   const activity: SuspensionActivity[] = []
 
