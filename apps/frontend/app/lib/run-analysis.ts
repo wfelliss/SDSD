@@ -41,7 +41,7 @@ function displacementToVelocity(reading: Reading, nextReading: Reading): Velocit
   const displacement = nextReading.displacement - reading.displacement
   const duration = nextReading.time - reading.time
 
-  const velocity = displacement / duration
+  const velocity = duration === 0 ? 0 : displacement / duration
 
   const time = { duration, start: reading.time, end: nextReading.time }
   const travel = { start: reading.displacement, end: nextReading.displacement }
