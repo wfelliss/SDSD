@@ -98,7 +98,7 @@ export function processCompressions(
     activity.push({
       type: isCompression ? "compression" : "rebound",
       displacement: totalDisplacement,
-      velocity: totalDisplacement / totalDuration,
+      velocity: totalDuration === 0 ? 0 : totalDisplacement / totalDuration,
       time: {
         start: startTime,
         end: endTime,
