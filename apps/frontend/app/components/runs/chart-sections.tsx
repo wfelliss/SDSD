@@ -7,12 +7,24 @@ import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
 import { getSeriesColor } from "app/lib/graphColors";
-import { getProfileFromRun } from "app/lib/telemetryUtils";
+import {
+  getProfileFromRun,
+  RawSuspensionData,
+  trimRawDataByBounds,
+} from "app/lib/telemetryUtils";
 
 interface ChartSectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
+}
+
+function toRawSuspensionArray(value: unknown): RawSuspensionData[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value as RawSuspensionData[];
 }
 
 function getSeriesConfig(
@@ -28,9 +40,12 @@ function getSeriesConfig(
   const isError = !data || data.error;
   const rawData = isError
     ? []
-    : type === "front"
-      ? data.data.suspension.front_sus
-      : data.data.suspension.rear_sus;
+    : toRawSuspensionArray(
+        type === "front"
+          ? data.data.suspension.front_sus
+          : data.data.suspension.rear_sus,
+      );
+  const trimmedRawData = trimRawDataByBounds(run, rawData);
   const freq = isError
     ? 100
     : type === "front"
@@ -54,7 +69,7 @@ function getSeriesConfig(
   return {
     label: customLabel ?? run.title ?? `Run ${run.id}`,
     color: getSeriesColor(index),
-    rawData,
+    rawData: trimmedRawData,
     freq,
     min,
     max,
@@ -136,10 +151,14 @@ export function HistogramSection({
 
         return {
           label: run.title ?? `Run ${run.id}`,
-          rawData:
-            type === "front"
-              ? data.data.suspension.front_sus
-              : data.data.suspension.rear_sus,
+          rawData: trimRawDataByBounds(
+            run,
+            toRawSuspensionArray(
+              type === "front"
+                ? data.data.suspension.front_sus
+                : data.data.suspension.rear_sus,
+            ),
+          ),
           fillColor: getSeriesColor(runIndex),
           min,
           max,

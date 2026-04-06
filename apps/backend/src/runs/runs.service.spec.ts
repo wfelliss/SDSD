@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { RunsService } from './runs.service';
 
 describe('RunsService', () => {
@@ -84,11 +84,11 @@ describe('RunsService', () => {
     expect(res2).toBeNull();
   });
 
-  it('createRun throws when run with srcPath exists', async () => {
+  it('createRun throws ConflictException when run with srcPath exists', async () => {
     const data = { srcPath: 'x', length: 10 } as any;
     jest.spyOn(service, 'findBySrcPath').mockResolvedValue({ id: 1 } as any);
 
-    await expect(service.createRun(data)).rejects.toThrow('Run with this srcPath already exists');
+    await expect(service.createRun(data)).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('createRun inserts and returns created row', async () => {
@@ -104,6 +104,21 @@ describe('RunsService', () => {
     expect(res).toEqual(inserted);
   });
 
+  it('createRun defaults bounds to full run range when omitted', async () => {
+    const data = { srcPath: 'bounds-default', length: 10 } as any;
+    jest.spyOn(service, 'findBySrcPath').mockResolvedValue(null);
+    mockDb.insert().values().returning.mockResolvedValue([{ id: 7, ...data }]);
+
+    await service.createRun(data);
+
+    expect(mockDb.insert().values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lower_bound_idx: 0,
+        upper_bound_idx: 9,
+      }),
+    );
+  });
+
   it('updateRun throws BadRequestException when updates empty', async () => {
     await expect(service.updateRun(1, {} as any)).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -115,6 +130,38 @@ describe('RunsService', () => {
     const res = await service.updateRun(1, { comments: 'ok' });
 
     expect(res).toEqual(updated);
+  });
+
+  it('updateRun rejects invalid trim bounds', async () => {
+    mockDb.query.runs.findFirst.mockResolvedValue({
+      id: 1,
+      length: 10,
+      lower_bound_idx: 0,
+      upper_bound_idx: 9,
+    });
+
+    await expect(
+      service.updateRun(1, { lower_bound_idx: 8, upper_bound_idx: 4 } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('updateRun allows valid trim bounds', async () => {
+    mockDb.query.runs.findFirst.mockResolvedValue({
+      id: 1,
+      length: 10,
+      lower_bound_idx: 0,
+      upper_bound_idx: 9,
+    });
+    mockDb.update().set().where().returning.mockResolvedValue([
+      { id: 1, lower_bound_idx: 2, upper_bound_idx: 8 },
+    ]);
+
+    const res = await service.updateRun(1, {
+      lower_bound_idx: 2,
+      upper_bound_idx: 8,
+    } as any);
+
+    expect(res).toEqual({ id: 1, lower_bound_idx: 2, upper_bound_idx: 8 });
   });
 
   it('updateRun returns null when no rows updated', async () => {

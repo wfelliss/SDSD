@@ -22,6 +22,8 @@ interface DisplacementPlotProps {
   title?: string;
   series: SeriesConfig[];
   height?: number;
+  brushSelection?: [number, number] | null;
+  onBrushSelection?: (selection: [number, number] | null) => void;
 }
 
 interface LineMetadata {
@@ -30,10 +32,12 @@ interface LineMetadata {
 }
 
 // DisplacementPlot renders suspension displacement
-export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
+export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
   title = "Displacement",
   series,
   height = 300,
+  brushSelection,
+  onBrushSelection,
 }) => {
   // Build plot lines for each series and optional smoothed sag overlays.
   const { chartData, lineMetadata } = useMemo(() => {
@@ -92,6 +96,8 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
           data={chartData}
           yDomain={[0, 100]}
           height={height}
+          brushSelection={brushSelection}
+          onBrushSelection={onBrushSelection}
           styleForSeries={(i) => {
             const meta = lineMetadata[i];
             if (!meta) {
@@ -109,4 +115,4 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
       </div>
     </section>
   );
-};
+});

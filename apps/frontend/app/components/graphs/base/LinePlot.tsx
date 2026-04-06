@@ -13,20 +13,29 @@ interface LinePlotProps {
   height?: number;
   className?: string;
   styleForSeries?: (index: number) => React.CSSProperties | undefined;
+  brushSelection?: [number, number] | null;
+  onBrushSelection?: (selection: [number, number] | null) => void;
 }
 
-export const LinePlot: React.FC<LinePlotProps> = ({
+export const LinePlot: React.FC<LinePlotProps> = React.memo(({
   data,
   xDomain,
   yDomain = [0, 100],
   height = 400,
   className = "",
   styleForSeries,
+  brushSelection,
+  onBrushSelection,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const clipPathId = useId();
   const [width, setWidth] = useState(0);
+  const brushRef = useRef<d3.BrushBehavior<any> | null>(null);
+  const brushGroupRef = useRef<d3.Selection<any, any, any, any> | null>(null);
+  const onBrushSelectionRef = useRef<typeof onBrushSelection>(onBrushSelection);
+  const isApplyingExternalSelectionRef = useRef(false);
+  const latestBrushSelectionRef = useRef<[number, number] | null>(null);
   
   // Persist scales for brush
   const scalesRef = useRef({
@@ -34,6 +43,10 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     y: d3.scaleLinear(),
     x2: d3.scaleLinear(),
   });
+
+  useEffect(() => {
+    onBrushSelectionRef.current = onBrushSelection;
+  }, [onBrushSelection]);
 
   // Resize observer (under graph)
   useEffect(() => {
@@ -47,7 +60,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Main D3 rendering logic
+  // Main D3 rendering logic (axes, paths, and brush setup)
   useEffect(() => {
     if (!svgRef.current || data.length === 0 || width === 0) return;
 
@@ -78,23 +91,50 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     x2.range([0, innerWidth]).domain(finalXDomain);
     const y2 = d3.scaleLinear().range([innerHeight2, 0]).domain(yDomain);
 
-    // Brushed interaction handler
+    // Brushed interaction handler keeps the focus chart in sync while dragging.
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent?.type === "zoom") return;
-      
-      const s = (event.selection as [number, number]) || x2.range();
+
+      const s = event.selection as [number, number] | null;
+      if (!s) {
+        return;
+      }
+
       x.domain(s.map(x2.invert, x2));
-      
+
       const lineGenerator = d3.line<DataPoint>()
         .x((d) => x(d.x))
         .y((d) => y(d.y))
         .curve(d3.curveMonotoneX);
-      
+
       svg.select(".focus")
         .selectAll<SVGPathElement, DataPoint[]>(".line-path")
         .attr("d", lineGenerator);
-      
+
       svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
+    };
+
+    // Emit selection to React only when brushing ends to avoid render thrash.
+    const brushEnded = (event: d3.D3BrushEvent<unknown>) => {
+      if (isApplyingExternalSelectionRef.current) {
+        return;
+      }
+
+      // Ignore programmatic brush.move calls.
+      if (!event.sourceEvent) {
+        return;
+      }
+
+      const s = event.selection as [number, number] | null;
+      if (!s) {
+        latestBrushSelectionRef.current = null;
+        onBrushSelectionRef.current?.(null);
+        return;
+      }
+
+      const nextSelection = s.map(x2.invert, x2) as [number, number];
+      latestBrushSelectionRef.current = nextSelection;
+      onBrushSelectionRef.current?.(nextSelection);
     };
 
     // Clip path (scoped per component instance)
@@ -186,9 +226,10 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("d", lineGenerator2);
 
     // Brush
-    const brush = d3.brushX<null>()
+    const brush = d3.brushX<any>()
       .extent([[0, 0], [innerWidth, innerHeight2]])
-      .on("brush end", brushed);
+      .on("brush", brushed)
+      .on("end", brushEnded);
 
     context.selectAll<SVGGElement, null>(".brush")
       .data([null])
@@ -198,11 +239,63 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
 
+    brushRef.current = brush;
+    brushGroupRef.current = context.select<SVGGElement>(".brush");
+
+    if (brushSelection) {
+      isApplyingExternalSelectionRef.current = true;
+      brushGroupRef.current?.call(
+        brush.move,
+        brushSelection.map((value) => x2(value)) as [number, number],
+      );
+      isApplyingExternalSelectionRef.current = false;
+      latestBrushSelectionRef.current = brushSelection;
+    }
+
   }, [data, width, height, xDomain, yDomain, styleForSeries, clipPathId]);
+
+  // External brush sync (e.g., reset/save/load) without re-running full chart setup.
+  useEffect(() => {
+    if (!brushRef.current || !brushGroupRef.current || data.length === 0 || width === 0) {
+      return;
+    }
+
+    const { x2 } = scalesRef.current;
+
+    const hasLatest = latestBrushSelectionRef.current !== null;
+    const hasIncoming = brushSelection !== null && brushSelection !== undefined;
+
+    if (!hasIncoming) {
+      if (!hasLatest) {
+        return;
+      }
+
+      isApplyingExternalSelectionRef.current = true;
+      brushGroupRef.current.call(brushRef.current.move, null);
+      isApplyingExternalSelectionRef.current = false;
+      latestBrushSelectionRef.current = null;
+      return;
+    }
+
+    const next = brushSelection as [number, number];
+    const prev = latestBrushSelectionRef.current;
+
+    if (prev && prev[0] === next[0] && prev[1] === next[1]) {
+      return;
+    }
+
+    isApplyingExternalSelectionRef.current = true;
+    brushGroupRef.current.call(
+      brushRef.current.move,
+      next.map((value) => x2(value)) as [number, number],
+    );
+    isApplyingExternalSelectionRef.current = false;
+    latestBrushSelectionRef.current = next;
+  }, [brushSelection, data.length, width]);
 
   return (
     <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>
       {width > 0 && <svg ref={svgRef} width={width} height={height} className="overflow-visible" />}
     </div>
   );
-};
+});

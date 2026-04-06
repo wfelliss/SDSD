@@ -14,6 +14,19 @@ export interface NormalizedPoint {
   y: number; 
 }
 
+export interface RunTrimBounds {
+  lowerBoundIdx: number;
+  upperBoundIdx: number;
+}
+
+function parseBound(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    return null;
+  }
+
+  return value;
+}
+
 export function getProfileFromRun(run: Run): Profile | null {
   const profileCandidate = (run as Run & { profile?: unknown }).profile;
   if (
@@ -25,6 +38,43 @@ export function getProfileFromRun(run: Run): Profile | null {
     !("back_max" in profileCandidate)
   ) return null;
   return profileCandidate as Profile;
+}
+
+export function resolveTrimBounds(run: Run, sampleLength: number): RunTrimBounds | null {
+  if (!Number.isFinite(sampleLength) || sampleLength <= 0) {
+    return null;
+  }
+
+  const runWithBounds = run as Run & {
+    lower_bound_idx?: unknown;
+    upper_bound_idx?: unknown;
+  };
+
+  const lastIndex = sampleLength - 1;
+  const rawLower = runWithBounds.lower_bound_idx;
+  const rawUpper = runWithBounds.upper_bound_idx;
+
+  const parsedLower = parseBound(rawLower) ?? 0;
+  const parsedUpper = parseBound(rawUpper) ?? lastIndex;
+
+  const lowerBoundIdx = Math.min(Math.max(parsedLower, 0), lastIndex);
+  const clampedUpper = Math.min(Math.max(parsedUpper, 0), lastIndex);
+  const upperBoundIdx = Math.max(clampedUpper, lowerBoundIdx);
+
+  return { lowerBoundIdx, upperBoundIdx };
+}
+
+export function trimRawDataByBounds<T>(run: Run, dataArr: T[]): T[] {
+  if (!Array.isArray(dataArr) || dataArr.length === 0) {
+    return [];
+  }
+
+  const bounds = resolveTrimBounds(run, dataArr.length);
+  if (!bounds) {
+    return [];
+  }
+
+  return dataArr.slice(bounds.lowerBoundIdx, bounds.upperBoundIdx + 1);
 }
 
 export function normalizeToPercentage(val: number, min?: number, max?: number): number {

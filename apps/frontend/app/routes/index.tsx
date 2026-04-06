@@ -1,5 +1,5 @@
 import { useLoaderData } from "react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "../components/runs/sidebar";
 import { MainContent } from "app/components/runs/main-content";
 import { RunJson } from "app/types/runs";
@@ -15,13 +15,23 @@ export const loader = async () => {
 
 // ---------------------- MAIN PAGE COMPONENT ----------------------
 export default function Runs() {
-  const { runs } = useLoaderData<typeof loader>();
+  const { runs: initialRuns } = useLoaderData<typeof loader>();
+  const [runs, setRuns] = useState<Run[]>(initialRuns);
   const [selected, setSelected] = useState<Run[]>([]);
   const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingRuns, setLoadingRuns] = useState<Set<number>>(new Set());
 
   const isCompareMode = selected.length > 1;
   const loadingJson = loadingRuns.size > 0;
+  const selectedRunIds = useMemo(() => selected.map((run) => run.id), [selected]);
+
+  useEffect(() => {
+    const selectedIdSet = new Set(selectedRunIds);
+    setJsonData((prev) => {
+      const nextEntries = Object.entries(prev).filter(([id]) => selectedIdSet.has(Number(id)));
+      return Object.fromEntries(nextEntries);
+    });
+  }, [selectedRunIds]);
 
   useEffect(() => {
     const fetchJson = async (run: Run) => {
@@ -54,10 +64,15 @@ export default function Runs() {
     <div className="flex h-screen">
       <Sidebar runs={runs} selected={selected} setSelected={setSelected} />
       <MainContent
-        selected={selected}
+        selected={selected.map((s) => runs.find((r) => r.id === s.id) || s)}
         jsonData={jsonData}
         loadingJson={loadingJson}
         isCompareMode={isCompareMode}
+        onRunUpdate={(id, updates) => {
+          setRuns((prevRuns) =>
+            prevRuns.map((r) => (r.id === id ? { ...r, ...updates } : r))
+          );
+        }}
       />
     </div>
   );

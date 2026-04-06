@@ -11,12 +11,13 @@ import {
 import { Run } from "@repo/database";
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopUp";
-import { UserIcon } from "lucide-react";
+import { UserIcon, Scissors } from "lucide-react";
 import { RunsMetadata } from "./runs-metadata";
 import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
 import { CommentsPopup } from "./commentsPopup";
 import { updateRun } from "app/api/runs";
 import { SummarySection } from "./summary-section";
+import { TrimPopup } from "./trimPopup";
 
 
 
@@ -25,6 +26,7 @@ interface MainContentProps {
   jsonData: Record<number, RunJson>;
   loadingJson: boolean;
   isCompareMode: boolean;
+  onRunUpdate?: (id: number, updates: Partial<Run>) => void;
 }
 
 export function MainContent({
@@ -32,6 +34,7 @@ export function MainContent({
   jsonData,
   loadingJson,
   isCompareMode,
+  onRunUpdate,
 }: MainContentProps) {
   
   const { runs, handleProfileUpdate, handleRunUpdate } = useOptimisticRuns(initialSelected);
@@ -40,6 +43,7 @@ export function MainContent({
   // Comments popup state
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentsRun, setCommentsRun] = useState<Run | null>(null);
+  const [trimOpen, setTrimOpen] = useState(false);
 
 
   // 2. NOW you can do conditional returns
@@ -116,6 +120,7 @@ export function MainContent({
                   await updateRun(id, { comments: newComments });
                   // update local state on success
                   handleRunUpdate(id, { comments: newComments });
+                  onRunUpdate?.(id, { comments: newComments });
                 } catch (e) {
                   console.error("Failed to persist comments", e);
                   // Optionally, add user-facing error handling here.
@@ -123,16 +128,38 @@ export function MainContent({
               }}
             />
 
+            <TrimPopup
+              isOpen={trimOpen}
+              onClose={() => setTrimOpen(false)}
+              run={!isCompareMode ? runs[0] ?? null : null}
+              runJson={!isCompareMode && runs[0] ? jsonData[runs[0].id] : undefined}
+              onSave={async (id, payload) => {
+                await updateRun(id, payload);
+                handleRunUpdate(id, payload);
+                onRunUpdate?.(id, payload);
+              }}
+            />
+
             <div className="w-full flex justify-between mb-8" >
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
                 {isCompareMode ? "Run Comparison" : runs[0]?.title || "Run Details"}
               </h1>
-              <button 
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
-                onClick={() => setIsPopupOpen(true)}
-              >
-                <UserIcon className="size-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+                  onClick={() => setTrimOpen(true)}
+                  disabled={isCompareMode}
+                  title={isCompareMode ? "Trim editor is available in single-run mode only" : "Trim run bounds"}
+                >
+                  <Scissors className="size-5" />
+                </button>
+                <button 
+                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
+                  onClick={() => setIsPopupOpen(true)}
+                >
+                  <UserIcon className="size-5" />
+                </button>
+              </div>
             </div>
 
             {/* Metadata section (extracted to RunsMetadata component) */}

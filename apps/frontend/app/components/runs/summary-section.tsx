@@ -2,7 +2,12 @@ import { useMemo } from 'react';
 import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
-import { RawSuspensionData, normalizeToPercentage, getProfileFromRun } from "app/lib/telemetryUtils";
+import {
+  RawSuspensionData,
+  normalizeToPercentage,
+  getProfileFromRun,
+  trimRawDataByBounds,
+} from "app/lib/telemetryUtils";
 import { cn } from "app/lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
 
@@ -26,11 +31,14 @@ function getNormalizedSuspensionData(
     jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
   if (!suspensionData || suspensionData.length === 0) return null;
 
+  const trimmedSuspensionData = trimRawDataByBounds(run, suspensionData);
+  if (trimmedSuspensionData.length === 0) return null;
+
   const profile = getProfileFromRun(run);
   const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
   const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
 
-  const normalized = suspensionData
+  const normalized = trimmedSuspensionData
     .map(p => {
       const val = typeof p === 'number' ? p : Number(p.displacement ?? 0);
       return normalizeToPercentage(val, min, max);
