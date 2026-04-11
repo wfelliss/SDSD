@@ -60,7 +60,7 @@ function zoneSeconds(
 
 function maxTravel(norm: number[] | null): number | null {
   if (!norm || norm.length === 0) return null;
-  return Math.max(...norm);
+  return norm.reduce((max, v) => (v > max ? v : max), -Infinity);
 }
 
 function countZoneEntries(norm: number[] | null, lo: number, hi: number): number | null {
