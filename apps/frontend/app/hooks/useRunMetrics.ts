@@ -3,9 +3,12 @@ import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { RawSuspensionData, normalizeToPercentage, getProfileFromRun } from "app/lib/telemetryUtils";
 
-export const DYNAMIC_SAG_IDEAL_MIN = 25;
-export const DYNAMIC_SAG_IDEAL_MAX = 35;
-const BOTTOM_OUT_TRAVEL_MIN = 95;
+export const DYNAMIC_SAG_IDEAL_MIN_FRONT = 25;
+export const DYNAMIC_SAG_IDEAL_MAX_FRONT = 35;
+export const DYNAMIC_SAG_IDEAL_MIN_REAR = 25;
+export const DYNAMIC_SAG_IDEAL_MAX_REAR = 35;
+export const BOTTOM_OUT_TRAVEL_MIN = 95;
+export const BOTTOM_OUT_COUNT_THRESHOLD = 3;
 const OFF_GROUND_TRAVEL_MAX = 5;
 
 function getNormalizedSuspensionData(
@@ -55,6 +58,24 @@ function zoneSeconds(
   return norm.filter(v => v >= lo && v <= hi).length / freq;
 }
 
+function maxTravel(norm: number[] | null): number | null {
+  if (!norm || norm.length === 0) return null;
+  return Math.max(...norm);
+}
+
+function countZoneEntries(norm: number[] | null, lo: number, hi: number): number | null {
+  if (!norm || norm.length === 0) return null;
+  let count = 0;
+  let inZone = norm[0]! >= lo && norm[0]! <= hi;
+  if (inZone) count++;
+  for (let i = 1; i < norm.length; i++) {
+    const nowInZone = norm[i]! >= lo && norm[i]! <= hi;
+    if (nowInZone && !inZone) count++;
+    inZone = nowInZone;
+  }
+  return count;
+}
+
 function calculateCompression(_run: Run, _jsonData: Record<number, RunJson>, _type: 'front' | 'rear') {
   return 0;
 }
@@ -73,12 +94,16 @@ export function useRunMetrics(run: Run, jsonData: Record<number, RunJson>) {
     return {
       frontSag:          dynamicSag(frontNorm),
       rearSag:           dynamicSag(rearNorm),
-      frontBottomOutPct: zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontBottomOutSec: zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
+      frontBottomOutPct:   zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+      frontBottomOutSec:   zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
+      frontBottomOutCount: countZoneEntries(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+      frontMaxTravel:      maxTravel(frontNorm),
       frontOffGroundPct: zonePercent(frontNorm, 0, OFF_GROUND_TRAVEL_MAX),
       frontOffGroundSec: zoneSeconds(frontNorm, frontFreq, 0, OFF_GROUND_TRAVEL_MAX),
-      rearBottomOutPct:  zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearBottomOutSec:  zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
+      rearBottomOutPct:   zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
+      rearBottomOutSec:   zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
+      rearBottomOutCount: countZoneEntries(rearNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+      rearMaxTravel:       maxTravel(rearNorm),
       rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
       rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
       frontCompression:  calculateCompression(run, jsonData, 'front'),
