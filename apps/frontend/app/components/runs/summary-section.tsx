@@ -58,10 +58,7 @@ function BottomOutCell({ count, maxTravel, sagInRange }: BottomOutCellProps) {
   let tooltip: string;
   let color: string;
 
-  if (sagInRange === false) {
-    tooltip = 'Correct sag prior to volume spacers';
-    color = 'bg-red-100 text-red-800';
-  } else if (count > BOTTOM_OUT_COUNT_THRESHOLD) {
+  if (count > BOTTOM_OUT_COUNT_THRESHOLD) {
     tooltip = 'Add a volume spacer';
     color = 'bg-red-100 text-red-800';
   } else if (count === 0 && maxTravel !== null && maxTravel < BOTTOM_OUT_TRAVEL_MIN) {
@@ -70,6 +67,10 @@ function BottomOutCell({ count, maxTravel, sagInRange }: BottomOutCellProps) {
   } else {
     tooltip = 'Correct volume spacers';
     color = 'bg-green-100 text-green-800';
+  }
+
+  if (sagInRange === false) {
+    tooltip = `Sag is not in range, suggestions may be inaccurate.\n${tooltip}`;
   }
 
   return (
