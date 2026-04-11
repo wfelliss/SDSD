@@ -91,9 +91,14 @@ export function useRunMetrics(run: Run, jsonData: Record<number, RunJson>) {
     const frontFreq = run.front_freq ?? null;
     const rearFreq  = run.rear_freq  ?? null;
 
+    const frontSag = dynamicSag(frontNorm);
+    const rearSag  = dynamicSag(rearNorm);
+
     return {
-      frontSag:          dynamicSag(frontNorm),
-      rearSag:           dynamicSag(rearNorm),
+      frontSag,
+      rearSag,
+      frontSagInRange: frontSag === null ? null : frontSag >= DYNAMIC_SAG_IDEAL_MIN_FRONT && frontSag <= DYNAMIC_SAG_IDEAL_MAX_FRONT,
+      rearSagInRange:  rearSag  === null ? null : rearSag  >= DYNAMIC_SAG_IDEAL_MIN_REAR  && rearSag  <= DYNAMIC_SAG_IDEAL_MAX_REAR,
       frontBottomOutPct:   zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
       frontBottomOutSec:   zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
       frontBottomOutCount: countZoneEntries(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),

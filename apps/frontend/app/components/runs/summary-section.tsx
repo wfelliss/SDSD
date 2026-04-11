@@ -106,11 +106,6 @@ interface RunSummaryRowProps {
 function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
   const metrics = useRunMetrics(run, jsonData);
 
-  const frontSagInRange = metrics.frontSag === null ? null
-    : metrics.frontSag >= DYNAMIC_SAG_IDEAL_MIN_FRONT && metrics.frontSag <= DYNAMIC_SAG_IDEAL_MAX_FRONT;
-  const rearSagInRange = metrics.rearSag === null ? null
-    : metrics.rearSag >= DYNAMIC_SAG_IDEAL_MIN_REAR && metrics.rearSag <= DYNAMIC_SAG_IDEAL_MAX_REAR;
-
   return (
     <tr className="border-t border-border">
       <td className="px-3 py-2 text-foreground">{run.title || `Run ${run.id}`}</td>
@@ -120,7 +115,7 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       <td className="px-3 py-2 text-foreground">{metrics.frontCompression}</td>
       <td className="px-3 py-2 text-foreground">{metrics.frontRebound}</td>
       <td className="px-3 py-2">
-        <BottomOutCell count={metrics.frontBottomOutCount} maxTravel={metrics.frontMaxTravel} sagInRange={frontSagInRange} />
+        <BottomOutCell count={metrics.frontBottomOutCount} maxTravel={metrics.frontMaxTravel} sagInRange={metrics.frontSagInRange} />
       </td>
       <td className="px-3 py-2">
         <TravelZoneCell value={metrics.frontOffGroundPct} seconds={metrics.frontOffGroundSec} />
@@ -131,7 +126,7 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       <td className="px-3 py-2 text-foreground">{metrics.rearCompression}</td>
       <td className="px-3 py-2 text-foreground">{metrics.rearRebound}</td>
       <td className="px-3 py-2">
-        <BottomOutCell count={metrics.rearBottomOutCount} maxTravel={metrics.rearMaxTravel} sagInRange={rearSagInRange} />
+        <BottomOutCell count={metrics.rearBottomOutCount} maxTravel={metrics.rearMaxTravel} sagInRange={metrics.rearSagInRange} />
       </td>
       <td className="px-3 py-2">
         <TravelZoneCell value={metrics.rearOffGroundPct} seconds={metrics.rearOffGroundSec} />
@@ -223,16 +218,12 @@ function MobileRunSummaryRow({ run, jsonData, type }: MobileRunSummaryRowProps) 
   const metrics = useRunMetrics(run, jsonData);
 
   const isFork = type === 'fork';
-  const sag = isFork ? metrics.frontSag : metrics.rearSag;
-  const sagMin = isFork ? DYNAMIC_SAG_IDEAL_MIN_FRONT : DYNAMIC_SAG_IDEAL_MIN_REAR;
-  const sagMax = isFork ? DYNAMIC_SAG_IDEAL_MAX_FRONT : DYNAMIC_SAG_IDEAL_MAX_REAR;
-  const sagInRange = sag === null ? null : sag >= sagMin && sag <= sagMax;
 
   return (
     <tr className="border-t border-border">
       <td className="px-3 py-2 text-foreground">{run.title || `Run ${run.id}`}</td>
       <td className="px-3 py-2">
-        <SagCell value={sag} type={isFork ? 'front' : 'rear'} />
+        <SagCell value={isFork ? metrics.frontSag : metrics.rearSag} type={isFork ? 'front' : 'rear'} />
       </td>
       <td className="px-3 py-2 text-foreground">{isFork ? metrics.frontCompression : metrics.rearCompression}</td>
       <td className="px-3 py-2 text-foreground">{isFork ? metrics.frontRebound : metrics.rearRebound}</td>
@@ -240,7 +231,7 @@ function MobileRunSummaryRow({ run, jsonData, type }: MobileRunSummaryRowProps) 
         <BottomOutCell
           count={isFork ? metrics.frontBottomOutCount : metrics.rearBottomOutCount}
           maxTravel={isFork ? metrics.frontMaxTravel : metrics.rearMaxTravel}
-          sagInRange={sagInRange}
+          sagInRange={isFork ? metrics.frontSagInRange : metrics.rearSagInRange}
         />
       </td>
       <td className="px-3 py-2">
