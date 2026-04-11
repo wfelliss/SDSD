@@ -3,7 +3,7 @@ import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { cn } from "app/lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { useRunMetrics, DYNAMIC_SAG_IDEAL_MIN, DYNAMIC_SAG_IDEAL_MAX } from "app/hooks/useRunMetrics";
+import { useRunMetrics, DYNAMIC_SAG_IDEAL_MIN_FRONT, DYNAMIC_SAG_IDEAL_MAX_FRONT, DYNAMIC_SAG_IDEAL_MIN_REAR, DYNAMIC_SAG_IDEAL_MAX_REAR, BOTTOM_OUT_COUNT_THRESHOLD, BOTTOM_OUT_TRAVEL_MIN } from "app/hooks/useRunMetrics";
 
 interface SummarySectionProps {
   selected: Run[];
@@ -20,7 +20,9 @@ function SagCell({ value, type }: SagCellProps) {
   if (value === null) return <span>—</span>;
 
   const component = type === 'front' ? 'fork' : 'shock';
-  const inRange = value >= DYNAMIC_SAG_IDEAL_MIN && value <= DYNAMIC_SAG_IDEAL_MAX;
+  const min = type === 'front' ? DYNAMIC_SAG_IDEAL_MIN_FRONT : DYNAMIC_SAG_IDEAL_MIN_REAR;
+  const max = type === 'front' ? DYNAMIC_SAG_IDEAL_MAX_FRONT : DYNAMIC_SAG_IDEAL_MAX_REAR;
+  const inRange = value >= min && value <= max;
 
   const pillClass = cn(
     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
@@ -30,16 +32,53 @@ function SagCell({ value, type }: SagCellProps) {
   return (
     <span className={pillClass}>
       {value.toFixed(1)}%
-      {!inRange && value < DYNAMIC_SAG_IDEAL_MIN && (
+      {!inRange && value < min && (
         <span title={`Reduce pressure in the ${component}`}>
           <ArrowUp size={12} />
         </span>
       )}
-      {!inRange && value > DYNAMIC_SAG_IDEAL_MAX && (
+      {!inRange && value > max && (
         <span title={`Increase pressure in the ${component}`}>
           <ArrowDown size={12} />
         </span>
       )}
+    </span>
+  );
+}
+
+interface BottomOutCellProps {
+  count: number | null;
+  maxTravel: number | null;
+  sagInRange: boolean | null;
+}
+
+function BottomOutCell({ count, maxTravel, sagInRange }: BottomOutCellProps) {
+  if (count === null) return <span>—</span>;
+
+  let tooltip: string;
+  let color: string;
+
+  if (count > BOTTOM_OUT_COUNT_THRESHOLD) {
+    tooltip = 'Add a volume spacer';
+    color = 'bg-red-100 text-red-800';
+  } else if (count === 0 && maxTravel !== null && maxTravel < BOTTOM_OUT_TRAVEL_MIN) {
+    tooltip = 'Remove volume spacer';
+    color = 'bg-red-100 text-red-800';
+  } else {
+    tooltip = 'Correct volume spacers';
+    color = 'bg-green-100 text-green-800';
+  }
+
+  if (sagInRange === false) {
+    tooltip = `Sag is not in range, suggestions may be inaccurate.\n${tooltip}`;
+  }
+
+  return (
+    <span
+      className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', color)}
+      title={tooltip}
+    >
+      {count}
     </span>
   );
 }
@@ -76,7 +115,7 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       <td className="px-3 py-2 text-foreground">{metrics.frontCompression}</td>
       <td className="px-3 py-2 text-foreground">{metrics.frontRebound}</td>
       <td className="px-3 py-2">
-        <TravelZoneCell value={metrics.frontBottomOutPct} seconds={metrics.frontBottomOutSec} />
+        <BottomOutCell count={metrics.frontBottomOutCount} maxTravel={metrics.frontMaxTravel} sagInRange={metrics.frontSagInRange} />
       </td>
       <td className="px-3 py-2">
         <TravelZoneCell value={metrics.frontOffGroundPct} seconds={metrics.frontOffGroundSec} />
@@ -87,7 +126,7 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
       <td className="px-3 py-2 text-foreground">{metrics.rearCompression}</td>
       <td className="px-3 py-2 text-foreground">{metrics.rearRebound}</td>
       <td className="px-3 py-2">
-        <TravelZoneCell value={metrics.rearBottomOutPct} seconds={metrics.rearBottomOutSec} />
+        <BottomOutCell count={metrics.rearBottomOutCount} maxTravel={metrics.rearMaxTravel} sagInRange={metrics.rearSagInRange} />
       </td>
       <td className="px-3 py-2">
         <TravelZoneCell value={metrics.rearOffGroundPct} seconds={metrics.rearOffGroundSec} />
@@ -144,7 +183,7 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">
               Rebound
             </th>
-            <th className="px-3 py-2 font-semibold text-foreground" scope="col">Bottomed Out</th>
+            <th className="px-3 py-2 font-semibold text-foreground" scope="col">Bottom Outs</th>
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">Off Ground</th>
             <th className="px-3 py-2 font-semibold text-foreground border-l border-border" scope="col">
               Dynamic Sag
@@ -155,7 +194,7 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">
               Rebound
             </th>
-            <th className="px-3 py-2 font-semibold text-foreground" scope="col">Bottomed Out</th>
+            <th className="px-3 py-2 font-semibold text-foreground" scope="col">Bottom Outs</th>
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">Off Ground</th>
           </tr>
         </thead>
@@ -189,9 +228,10 @@ function MobileRunSummaryRow({ run, jsonData, type }: MobileRunSummaryRowProps) 
       <td className="px-3 py-2 text-foreground">{isFork ? metrics.frontCompression : metrics.rearCompression}</td>
       <td className="px-3 py-2 text-foreground">{isFork ? metrics.frontRebound : metrics.rearRebound}</td>
       <td className="px-3 py-2">
-        <TravelZoneCell
-          value={isFork ? metrics.frontBottomOutPct : metrics.rearBottomOutPct}
-          seconds={isFork ? metrics.frontBottomOutSec : metrics.rearBottomOutSec}
+        <BottomOutCell
+          count={isFork ? metrics.frontBottomOutCount : metrics.rearBottomOutCount}
+          maxTravel={isFork ? metrics.frontMaxTravel : metrics.rearMaxTravel}
+          sagInRange={isFork ? metrics.frontSagInRange : metrics.rearSagInRange}
         />
       </td>
       <td className="px-3 py-2">
@@ -223,7 +263,7 @@ function MobileSummaryTable({ selected, jsonData }: MobileSummaryTableProps) {
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">Dynamic Sag</th>
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">Compression</th>
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">Rebound</th>
-            <th className="px-3 py-2 font-semibold text-foreground" scope="col">Bottomed Out</th>
+            <th className="px-3 py-2 font-semibold text-foreground" scope="col">Bottom Outs</th>
             <th className="px-3 py-2 font-semibold text-foreground" scope="col">Off Ground</th>
           </tr>
         </thead>
