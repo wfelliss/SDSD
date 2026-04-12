@@ -7,7 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiKeyAuth } from 'src/auth/decorator';
 import * as multer from 'multer';
-
 @Controller('s3')
 export class S3Controller {
   constructor(
@@ -41,7 +40,7 @@ export class S3Controller {
     if (!path) {
       throw new BadRequestException('Query parameter `path` is required');
     }
-    
+
     try {
       const { stream, contentType, contentLength } = await this.s3Service.getFileStream(path);
 
@@ -64,11 +63,11 @@ export class S3Controller {
 private async ensureUniqueKey(originalKey: string): Promise<string> {
     let candidate = originalKey;
     let i = 1;
-    
+
     while (true) {
         // Fix: Removed try/catch. If objectExists fails, it will throw automatically.
         const exists = await this.s3Service.objectExists(candidate);
-        
+
         if (!exists) {
             return candidate;
         }
@@ -119,7 +118,7 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
     const frontStart = parseInt(rows[1][7], 10);
     return [rearStart, frontStart];
   }
-  
+
   private findMax(startValue, suspensionStroke, potentiometerStroke): number {
     if (!suspensionStroke || !Number.isFinite(suspensionStroke)) return 4095;
 
@@ -127,7 +126,7 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
     const endValue = startValue + suspensionStroke * adcPerMm;
     return Math.min(4095, Math.max(0, Math.round(endValue)));
   }
-  
+
   /**
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
@@ -227,7 +226,9 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
         back_min: rearStart,
         front_max: front_max,
         back_max: back_max,
-      }
+        front_travel: metadata?.front_stroke,
+        back_travel: metadata?.rear_stroke
+      } as const
       console.log('💾 Creating profile record with data:', JSON.stringify(profileData, null, 2));
       const profile = await this.profilesService.create(profileData);
       console.log('💾 Created profile record:', profile);

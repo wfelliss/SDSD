@@ -12,7 +12,10 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async signIn(@Body() signInDto: SignInDto, @Res({ passthrough: true }) res: Response) {
+  async signIn(
+    @Body() signInDto: SignInDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ access_token: string }> {
     const token = await this.authService.signIn(signInDto.email, signInDto.password);
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('access_token', token, {
@@ -21,10 +24,11 @@ export class AuthController {
       sameSite: isProd ? 'none' : 'strict',
       maxAge: 60 * 60 * 1000, // 1 hour
     });
+    return { access_token: token };
   }
 
   @Get('me')
-  getCurrentUser(@Request() req) {
+  getCurrentUser(@Request() req: { user: unknown }) {
     return req.user;
   }
   

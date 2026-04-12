@@ -18,7 +18,7 @@ export const ProfilePopup = ({ isOpen, onClose, selected, onProfileUpdate }: Pro
         onClick={onClose}
       />
       
-      <div className="relative z-10 w-full max-w-lg rounded bg-white p-6 shadow-xl">
+      <div className="relative z-10 w-full max-w-lg mx-4 rounded bg-white p-6 shadow-xl">
         <h2 className="mb-2 text-lg font-semibold">Profile</h2>
         
         <div className="flex flex-col gap-2">
