@@ -44,7 +44,8 @@ export class AuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const token = request.cookies?.access_token;
+    const token =
+      request.cookies?.access_token ?? this.extractBearerToken(request);
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -56,5 +57,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     return true;
+  }
+
+  private extractBearerToken(request: Record<string, any>): string | undefined {
+    const authHeader = request.headers?.authorization as string | undefined;
+    if (!authHeader) return undefined;
+    const [scheme, token] = authHeader.split(' ');
+    if (scheme?.toLowerCase() !== 'bearer' || !token) return undefined;
+    return token;
   }
 }
