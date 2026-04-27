@@ -5,7 +5,6 @@ import { ProfilesService } from '../profiles/profiles.service';
 import { RunsService } from '../runs/runs.service';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiKeyAuth } from 'src/auth/decorator';
 import * as multer from 'multer';
 @Controller('s3')
 export class S3Controller {
@@ -131,7 +130,6 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
    * Accept multipart/form-data file upload (field `file`).
    * Extracts metadata from the JSON file itself and creates a DB run record.
    */
-  @ApiKeyAuth()
   @Post('newRunFile')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
   async newRunFile(
@@ -155,8 +153,8 @@ private async ensureUniqueKey(originalKey: string): Promise<string> {
     // Convert new csv into json format
     const csvContent = file.buffer.toString('utf-8');
     const [rearStart, frontStart] = this.getStartingValues(csvContent);
-    const front_max = this.findMax(frontStart, metadata?.front_stroke, 230);
-    const back_max = this.findMax(rearStart, metadata?.rear_stroke, 80);
+    const front_max = this.findMax(frontStart, metadata?.front_stroke, 222); // found by measuring usable range
+    const back_max = this.findMax(rearStart, metadata?.rear_stroke, 77); // found by measuring usable range
     const columns = this.parseCsvToColumnArrays(csvContent);
     console.log('✅ CSV parsed into columns. Number of columns:', columns.length);
     // build json file
