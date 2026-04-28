@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   ScatterPlot,
   ScatterSeries,
@@ -7,19 +7,19 @@ import {
 } from "../base/ScatterPlot";
 import {
   RawSuspensionData,
-  buildVelocitySamples,
   buildLineFromPoints,
-  VelocitySample,
   LinePoint,
 } from "app/lib/telemetryUtils";
+import {
+  processCompressions,
+  SuspensionActivity,
+} from "app/lib/run-analysis";
 import { getSeriesColor } from "app/lib/graphColors";
 
 export type SpeedRegion = {
   low: number;
   high: number;
 };
-
-export type UnitMode = "mm" | "percent";
 
 interface ReboundCompressionPlotProps {
   title: string;
@@ -30,137 +30,219 @@ interface ReboundCompressionPlotProps {
     freq: number;
     min?: number;
     max?: number;
+    length?: number;
   }[];
-  mode: "compression" | "rebound";
   height?: number;
   speedRegion: SpeedRegion;
-  unitMode?: UnitMode;
-  onUnitModeChange?: (mode: UnitMode) => void;
-  onPointSelect?: (selection: { seriesIndex: number; index: number }) => void;
+  onPointSelect?: (selection: {
+    seriesIndex: number;
+    startIndex: number;
+    endIndex: number;
+  }) => void;
 }
 
 type PreparedSeries = {
   label: string;
   color: string;
-  samples: VelocitySample[];
-  points: LinePoint[];
-  lowPoints: LinePoint[];
-  highPoints: LinePoint[];
-  scatterPoints: {
+  freq: number;
+  compressionScatterPoints: {
     x: number;
     y: number;
     id: string;
     meta: {
-      index: number;
+      startIndex: number;
+      endIndex: number;
       speed: number;
       displacement: number;
-      unit: UnitMode;
     };
   }[];
+  reboundScatterPoints: {
+    x: number;
+    y: number;
+    id: string;
+    meta: {
+      startIndex: number;
+      endIndex: number;
+      speed: number;
+      displacement: number;
+    };
+  }[];
+  compressionPoints: LinePoint[];
+  compressionLowPoints: LinePoint[];
+  compressionHighPoints: LinePoint[];
+  reboundPoints: LinePoint[];
+  reboundLowPoints: LinePoint[];
+  reboundHighPoints: LinePoint[];
 };
 
-const DEFAULT_UNIT: UnitMode = "percent";
+const flipY = (pt: LinePoint): LinePoint => ({ x: pt.x, y: Math.abs(pt.y) });
 
-const toggleLabels: Record<UnitMode, string> = {
-  percent: "%",
-  mm: "mm",
-};
+function filterOutliers(
+  suspensionActivity: SuspensionActivity[],
+): SuspensionActivity[] {
+  if (suspensionActivity.length === 0) return suspensionActivity;
 
-const formatModeLabel = (mode: UnitMode) =>
-  mode === "percent" ? "% travel" : "mm displacement";
+  const velocities = suspensionActivity.map((a) => a.velocity);
+  const displacements = suspensionActivity.map((a) => a.displacement);
+
+  const mean = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
+  const std = (arr: number[], m: number) =>
+    Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
+
+  const vMean = mean(velocities);
+  const vStd = std(velocities, vMean);
+  const dMean = mean(displacements);
+  const dStd = std(displacements, dMean);
+
+  return suspensionActivity.filter(
+    (a) =>
+      Math.abs(a.velocity - vMean) < 5 * vStd &&
+      Math.abs(a.displacement - dMean) < 5 * dStd,
+  );
+}
 
 export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
   title,
   series,
-  mode,
   height = 320,
   speedRegion,
-  unitMode = DEFAULT_UNIT,
-  onUnitModeChange,
   onPointSelect,
 }) => {
-  const [internalMode, setInternalMode] = useState<UnitMode>(unitMode);
-  const activeMode = onUnitModeChange ? unitMode : internalMode;
-
   const prepared = useMemo<PreparedSeries[]>(() => {
     return series.map((s, index) => {
-      const samples = buildVelocitySamples(s.rawData, s.freq, s.min, s.max);
-      const filtered = samples.filter((sample) =>
-        mode === "compression" ? sample.velocity > 0 : sample.velocity < 0,
+      const length = s.length ?? 220;
+      const min = s.min ?? 0;
+      const max = s.max ?? 4096;
+
+      const activities = processCompressions(
+        s.rawData,
+        s.freq,
+        length,
+        min,
+        max,
       );
 
-      const points = filtered.map((sample) => ({
-        x: sample.speed,
-        y: activeMode === "percent" ? sample.normalized : sample.displacement,
-      }));
+      const toPoint = (a: SuspensionActivity): LinePoint => ({
+        x: Math.abs(a.velocity),
+        y: a.displacement,
+      });
 
-      const lowPoints = filtered
-        .filter((sample) => sample.speed <= speedRegion.low)
-        .map((sample) => ({
-          x: sample.speed,
-          y: activeMode === "percent" ? sample.normalized : sample.displacement,
+      const compressions = filterOutliers(
+        activities.filter((a) => a.type === "compression"),
+      );
+      const rebounds = filterOutliers(
+        activities.filter((a) => a.type === "rebound"),
+      );
+
+      const compressionPoints = compressions.map(toPoint);
+      const reboundPoints = rebounds.map(toPoint).map(flipY);
+
+      const compressionLowPoints = compressions
+        .filter((a) => Math.abs(a.velocity) <= speedRegion.low)
+        .map(toPoint);
+      const compressionHighPoints = compressions
+        .filter((a) => Math.abs(a.velocity) >= speedRegion.high)
+        .map(toPoint);
+
+      const reboundLowPoints = rebounds
+        .filter((a) => Math.abs(a.velocity) <= speedRegion.low)
+        .map(toPoint)
+        .map(flipY);
+      const reboundHighPoints = rebounds
+        .filter((a) => Math.abs(a.velocity) >= speedRegion.high)
+        .map(toPoint)
+        .map(flipY);
+
+      const makeScatterPoints = (
+        acts: SuspensionActivity[],
+        flip: boolean,
+      ) =>
+        acts.map((a, idx) => ({
+          x: Math.abs(a.velocity),
+          y: flip ? Math.abs(a.displacement) : a.displacement,
+          id: `${index}-${flip ? "r" : "c"}-${idx}`,
+          meta: {
+            startIndex: Math.round(a.time.start * s.freq),
+            endIndex: Math.round(a.time.end * s.freq),
+            speed: Math.abs(a.velocity),
+            displacement: a.displacement,
+          },
         }));
-
-      const highPoints = filtered
-        .filter((sample) => sample.speed >= speedRegion.high)
-        .map((sample) => ({
-          x: sample.speed,
-          y: activeMode === "percent" ? sample.normalized : sample.displacement,
-        }));
-
-      const scatterPoints = filtered.map((sample) => ({
-        x: sample.speed,
-        y: activeMode === "percent" ? sample.normalized : sample.displacement,
-        id: `${index}-${sample.index}`,
-        meta: {
-          index: sample.index,
-          speed: sample.speed,
-          displacement:
-            activeMode === "percent" ? sample.normalized : sample.displacement,
-          unit: activeMode,
-        },
-      }));
 
       return {
         label: s.label,
         color: getSeriesColor(index, s.color),
-        samples,
-        points,
-        lowPoints,
-        highPoints,
-        scatterPoints,
+        freq: s.freq,
+        compressionScatterPoints: makeScatterPoints(compressions, false),
+        reboundScatterPoints: makeScatterPoints(rebounds, true),
+        compressionPoints,
+        compressionLowPoints,
+        compressionHighPoints,
+        reboundPoints,
+        reboundLowPoints,
+        reboundHighPoints,
       };
     });
-  }, [series, mode, speedRegion.low, speedRegion.high, activeMode]);
+  }, [series, speedRegion.low, speedRegion.high]);
 
   const maxSpeed = useMemo(() => {
     let max = 0;
     prepared.forEach((p) => {
-      p.samples.forEach((sample) => {
-        if (sample.speed > max) max = sample.speed;
-      });
+      [...p.compressionScatterPoints, ...p.reboundScatterPoints].forEach(
+        (pt) => {
+          if (pt.x > max) max = pt.x;
+        },
+      );
     });
     return max > 0 ? max : null;
   }, [prepared]);
 
-  const scatterSeries = useMemo<ScatterSeries[]>(() => {
+  const xMax = maxSpeed
+    ? Math.max(speedRegion.high, maxSpeed) * 1.05
+    : speedRegion.high * 1.3;
+
+  const compressionScatterSeries = useMemo<ScatterSeries[]>(() => {
     return prepared.map((p) => ({
       label: p.label,
       color: p.color,
-      points: p.scatterPoints,
+      points: p.compressionScatterPoints,
       pointRadius: 2.5,
       opacity: 0.7,
     }));
   }, [prepared]);
 
-  const trendLines = useMemo<ScatterLine[]>(() => {
+  const reboundScatterSeries = useMemo<ScatterSeries[]>(() => {
+    return prepared.map((p) => ({
+      label: p.label,
+      color: p.color,
+      points: p.reboundScatterPoints,
+      pointRadius: 2.5,
+      opacity: 0.7,
+    }));
+  }, [prepared]);
+
+  const buildTrendLines = (
+    type: "compression" | "rebound",
+  ): ScatterLine[] => {
     const lines: ScatterLine[] = [];
 
     prepared.forEach((p) => {
-      const allLine = buildLineFromPoints(p.points);
+      const allPts =
+        type === "compression" ? p.compressionPoints : p.reboundPoints;
+      const lowPts =
+        type === "compression"
+          ? p.compressionLowPoints
+          : p.reboundLowPoints;
+      const highPts =
+        type === "compression"
+          ? p.compressionHighPoints
+          : p.reboundHighPoints;
+      const prefix = type === "compression" ? "comp" : "reb";
+
+      const allLine = buildLineFromPoints(allPts);
       if (allLine.length > 0) {
         lines.push({
-          label: `${p.label} overall`,
+          label: `${p.label} ${type}`,
           color: p.color,
           points: allLine,
           strokeWidth: 2.5,
@@ -168,10 +250,10 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
         });
       }
 
-      const lowLine = buildLineFromPoints(p.lowPoints);
+      const lowLine = buildLineFromPoints(lowPts);
       if (lowLine.length > 0) {
         lines.push({
-          label: `${p.label} low-speed`,
+          label: `${p.label} ${prefix} low-speed`,
           color: p.color,
           points: lowLine,
           strokeWidth: 2,
@@ -180,10 +262,10 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
         });
       }
 
-      const highLine = buildLineFromPoints(p.highPoints);
+      const highLine = buildLineFromPoints(highPts);
       if (highLine.length > 0) {
         lines.push({
-          label: `${p.label} high-speed`,
+          label: `${p.label} ${prefix} high-speed`,
           color: p.color,
           points: highLine,
           strokeWidth: 2,
@@ -194,7 +276,19 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
     });
 
     return lines;
-  }, [prepared]);
+  };
+
+  const compressionTrendLines = useMemo(
+    () => buildTrendLines("compression"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prepared, maxSpeed, speedRegion.high],
+  );
+
+  const reboundTrendLines = useMemo(
+    () => buildTrendLines("rebound"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prepared, maxSpeed, speedRegion.high],
+  );
 
   const bands = useMemo<ScatterBand[]>(() => {
     const maxBand =
@@ -217,17 +311,28 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
     ];
   }, [speedRegion, maxSpeed]);
 
-  const handleToggle = () => {
-    const next = activeMode === "percent" ? "mm" : "percent";
-    if (onUnitModeChange) {
-      onUnitModeChange(next);
-    } else {
-      setInternalMode(next);
-    }
-  };
-
-  const yLabel = formatModeLabel(activeMode);
   const xLabel = "Speed (mm/s)";
+  const yLabel = "Displacement (mm)";
+
+  const handlePointClick =
+    (filterType: "compression" | "rebound") =>
+    (
+      point: { meta?: Record<string, unknown> },
+      seriesIndex: number,
+    ) => {
+      if (!onPointSelect) return;
+      const startIndex =
+        typeof point.meta?.startIndex === "number"
+          ? (point.meta.startIndex as number)
+          : 0;
+      const endIndex =
+        typeof point.meta?.endIndex === "number"
+          ? (point.meta.endIndex as number)
+          : 0;
+      onPointSelect({ seriesIndex, startIndex, endIndex });
+    };
+
+  const plotHeight = Math.round(height * 0.75);
 
   return (
     <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -235,21 +340,9 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
         <div>
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
           <p className="text-xs text-gray-500">
-            Low speed: 0–{speedRegion.low} mm/s · High speed: {speedRegion.high}
-            + mm/s
+            Low: 0–{speedRegion.low} mm/s · High: {speedRegion.high}+ mm/s
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleToggle}
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-        >
-          <span className="text-gray-400">Y-axis</span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-800">
-            {toggleLabels[activeMode]}
-          </span>
-          <span className="text-gray-400">toggle</span>
-        </button>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-3 text-xs">
@@ -276,29 +369,37 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
         </div>
       </div>
 
-      <ScatterPlot
-        series={scatterSeries}
-        lines={trendLines}
-        bands={bands}
-        height={height}
-        xLabel={xLabel}
-        yLabel={yLabel}
-        xDomain={[
-          0,
-          maxSpeed
-            ? Math.max(speedRegion.high, maxSpeed) * 1.05
-            : speedRegion.high * 1.3,
-        ]}
-        yDomain={activeMode === "percent" ? [0, 100] : undefined}
-        onPointClick={(point, seriesIndex) => {
-          if (!onPointSelect) return;
-          const index =
-            typeof point.meta?.index === "number"
-              ? (point.meta.index as number)
-              : 0;
-          onPointSelect({ seriesIndex, index });
-        }}
-      />
+      <div className="flex flex-col gap-4">
+        <div>
+          <h4 className="text-sm font-medium text-gray-600 mb-2">
+            Compression
+          </h4>
+          <ScatterPlot
+            series={compressionScatterSeries}
+            lines={compressionTrendLines}
+            bands={bands}
+            height={plotHeight}
+            xLabel={xLabel}
+            yLabel={yLabel}
+            xDomain={[0, xMax]}
+            onPointClick={handlePointClick("compression")}
+          />
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-gray-600 mb-2">Rebound</h4>
+          <ScatterPlot
+            series={reboundScatterSeries}
+            lines={reboundTrendLines}
+            bands={bands}
+            height={plotHeight}
+            xLabel={xLabel}
+            yLabel={yLabel}
+            xDomain={[0, xMax]}
+            onPointClick={handlePointClick("rebound")}
+          />
+        </div>
+      </div>
     </section>
   );
 };

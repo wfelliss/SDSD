@@ -40,7 +40,7 @@ function getSeriesConfig(
       ? run.front_freq || 100
       : run.rear_freq || 100;
 
-  // Apply rider profile min/max range
+  // Apply rider profile min/max range and suspension travel
   const profile = getProfileFromRun(run);
   const min = profile
     ? type === "front"
@@ -52,6 +52,11 @@ function getSeriesConfig(
       ? profile.front_max
       : profile.back_max
     : undefined;
+  const length = profile
+    ? type === "front"
+      ? profile.front_travel
+      : profile.back_travel
+    : undefined;
 
   // Build unified series config for displacement rendering
   return {
@@ -61,6 +66,7 @@ function getSeriesConfig(
     freq,
     min,
     max,
+    length,
     dynamicSag,
   };
 }
@@ -72,7 +78,6 @@ export function DisplacementSection({
   isCompareMode,
 }: ChartSectionProps) {
   const [highlight, setHighlight] = useState<LineHighlight | null>(null);
-  const [unitMode, setUnitMode] = useState<"mm" | "percent">("percent");
 
   if (!selected || selected.length === 0 || !selected[0]) {
     return <SectionHeader>No run selected</SectionHeader>;
@@ -102,79 +107,27 @@ export function DisplacementSection({
             highlight={highlight}
           />
 
-          <div className="grid grid-cols-1 gap-6">
-            <ReboundCompressionPlot
-              title="Front Fork Compression"
-              mode="compression"
-              series={selected.map((run, i) =>
-                getSeriesConfig(run, i, jsonData, "front", undefined, true),
-              )}
-              speedRegion={{ low: 50, high: 150 }}
-              unitMode={unitMode}
-              onUnitModeChange={setUnitMode}
-              onPointSelect={({ seriesIndex, index }) => {
-                setHighlight({
-                  seriesIndex,
-                  startIndex: Math.max(0, index - 2),
-                  endIndex: index + 2,
-                });
-              }}
-            />
-            <ReboundCompressionPlot
-              title="Front Fork Rebound"
-              mode="rebound"
-              series={selected.map((run, i) =>
-                getSeriesConfig(run, i, jsonData, "front", undefined, true),
-              )}
-              speedRegion={{ low: 50, high: 150 }}
-              unitMode={unitMode}
-              onUnitModeChange={setUnitMode}
-              onPointSelect={({ seriesIndex, index }) => {
-                setHighlight({
-                  seriesIndex,
-                  startIndex: Math.max(0, index - 2),
-                  endIndex: index + 2,
-                });
-              }}
-            />
-          </div>
+          <ReboundCompressionPlot
+            title="Front Suspension"
+            series={selected.map((run, i) =>
+              getSeriesConfig(run, i, jsonData, "front", undefined, true),
+            )}
+            speedRegion={{ low: 50, high: 150 }}
+            onPointSelect={({ seriesIndex, startIndex, endIndex }) => {
+              setHighlight({ seriesIndex, startIndex, endIndex });
+            }}
+          />
 
-          <div className="grid grid-cols-1 gap-6">
-            <ReboundCompressionPlot
-              title="Rear Shock Compression"
-              mode="compression"
-              series={selected.map((run, i) =>
-                getSeriesConfig(run, i, jsonData, "rear", undefined, true),
-              )}
-              speedRegion={{ low: 50, high: 150 }}
-              unitMode={unitMode}
-              onUnitModeChange={setUnitMode}
-              onPointSelect={({ seriesIndex, index }) => {
-                setHighlight({
-                  seriesIndex,
-                  startIndex: Math.max(0, index - 2),
-                  endIndex: index + 2,
-                });
-              }}
-            />
-            <ReboundCompressionPlot
-              title="Rear Shock Rebound"
-              mode="rebound"
-              series={selected.map((run, i) =>
-                getSeriesConfig(run, i, jsonData, "rear", undefined, true),
-              )}
-              speedRegion={{ low: 50, high: 150 }}
-              unitMode={unitMode}
-              onUnitModeChange={setUnitMode}
-              onPointSelect={({ seriesIndex, index }) => {
-                setHighlight({
-                  seriesIndex,
-                  startIndex: Math.max(0, index - 2),
-                  endIndex: index + 2,
-                });
-              }}
-            />
-          </div>
+          <ReboundCompressionPlot
+            title="Rear Suspension"
+            series={selected.map((run, i) =>
+              getSeriesConfig(run, i, jsonData, "rear", undefined, true),
+            )}
+            speedRegion={{ low: 50, high: 150 }}
+            onPointSelect={({ seriesIndex, startIndex, endIndex }) => {
+              setHighlight({ seriesIndex, startIndex, endIndex });
+            }}
+          />
         </div>
       ) : (
         firstData &&
@@ -196,107 +149,39 @@ export function DisplacementSection({
               highlight={highlight}
             />
 
-            <div className="grid grid-cols-1 gap-6">
-              <ReboundCompressionPlot
-                title="Front Fork Compression"
-                mode="compression"
-                series={[
-                  getSeriesConfig(
-                    first,
-                    0,
-                    jsonData,
-                    "front",
-                    "Front Fork",
-                    true,
-                  ),
-                ]}
-                speedRegion={{ low: 50, high: 150 }}
-                unitMode={unitMode}
-                onUnitModeChange={setUnitMode}
-                onPointSelect={({ index }) => {
-                  setHighlight({
-                    seriesIndex: 0,
-                    startIndex: Math.max(0, index - 2),
-                    endIndex: index + 2,
-                  });
-                }}
-              />
-              <ReboundCompressionPlot
-                title="Front Fork Rebound"
-                mode="rebound"
-                series={[
-                  getSeriesConfig(
-                    first,
-                    0,
-                    jsonData,
-                    "front",
-                    "Front Fork",
-                    true,
-                  ),
-                ]}
-                speedRegion={{ low: 50, high: 150 }}
-                unitMode={unitMode}
-                onUnitModeChange={setUnitMode}
-                onPointSelect={({ index }) => {
-                  setHighlight({
-                    seriesIndex: 0,
-                    startIndex: Math.max(0, index - 2),
-                    endIndex: index + 2,
-                  });
-                }}
-              />
-            </div>
+            <ReboundCompressionPlot
+              title="Front Suspension"
+              series={[
+                getSeriesConfig(
+                  first,
+                  0,
+                  jsonData,
+                  "front",
+                  "Front Fork",
+                ),
+              ]}
+              speedRegion={{ low: 50, high: 150 }}
+              onPointSelect={({ seriesIndex, startIndex, endIndex }) => {
+                setHighlight({ seriesIndex, startIndex, endIndex });
+              }}
+            />
 
-            <div className="grid grid-cols-1 gap-6">
-              <ReboundCompressionPlot
-                title="Rear Shock Compression"
-                mode="compression"
-                series={[
-                  getSeriesConfig(
-                    first,
-                    1,
-                    jsonData,
-                    "rear",
-                    "Rear Shock",
-                    true,
-                  ),
-                ]}
-                speedRegion={{ low: 50, high: 150 }}
-                unitMode={unitMode}
-                onUnitModeChange={setUnitMode}
-                onPointSelect={({ index }) => {
-                  setHighlight({
-                    seriesIndex: 1,
-                    startIndex: Math.max(0, index - 2),
-                    endIndex: index + 2,
-                  });
-                }}
-              />
-              <ReboundCompressionPlot
-                title="Rear Shock Rebound"
-                mode="rebound"
-                series={[
-                  getSeriesConfig(
-                    first,
-                    1,
-                    jsonData,
-                    "rear",
-                    "Rear Shock",
-                    true,
-                  ),
-                ]}
-                speedRegion={{ low: 50, high: 150 }}
-                unitMode={unitMode}
-                onUnitModeChange={setUnitMode}
-                onPointSelect={({ index }) => {
-                  setHighlight({
-                    seriesIndex: 1,
-                    startIndex: Math.max(0, index - 2),
-                    endIndex: index + 2,
-                  });
-                }}
-              />
-            </div>
+            <ReboundCompressionPlot
+              title="Rear Suspension"
+              series={[
+                getSeriesConfig(
+                  first,
+                  1,
+                  jsonData,
+                  "rear",
+                  "Rear Shock",
+                ),
+              ]}
+              speedRegion={{ low: 50, high: 150 }}
+              onPointSelect={({ startIndex, endIndex }) => {
+                setHighlight({ seriesIndex: 1, startIndex, endIndex });
+              }}
+            />
           </div>
         )
       )}

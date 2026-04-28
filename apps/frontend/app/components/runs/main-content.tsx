@@ -7,13 +7,13 @@ import {
   EmptyState,
   LoadingState,
   SectionDivider,
-} from "app/components/ui/run-elements"; 
+} from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopUp";
 import { UserIcon } from "lucide-react";
 import { RunsMetadata } from "./runs-metadata";
-import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
+import { useOptimisticRuns } from "app/hooks/useOptimisticRuns";
 import { CommentsPopup } from "./commentsPopup";
 import { updateRun } from "app/api/runs";
 import { SummarySection } from "./summary-section";
@@ -33,7 +33,7 @@ export function MainContent({
   loadingJson,
   isCompareMode,
 }: MainContentProps) {
-  
+
   const { runs, handleProfileUpdate, handleRunUpdate } = useOptimisticRuns(initialSelected);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
@@ -98,7 +98,7 @@ export function MainContent({
               <ProfilePopup
                 isOpen={isPopupOpen}
                 onClose={() => setIsPopupOpen(false)}
-                selected={runs} 
+                selected={runs}
                 onProfileUpdate={handleProfileUpdate}
               />
             )}
@@ -127,8 +127,8 @@ export function MainContent({
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground w-fit">
                 {isCompareMode ? "Run Comparison" : runs[0]?.title || "Run Details"}
               </h1>
-              <button 
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
+              <button
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
                 onClick={() => setIsPopupOpen(true)}
               >
                 <UserIcon className="size-5" />

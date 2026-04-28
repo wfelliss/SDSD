@@ -15,6 +15,7 @@ export interface SeriesConfig {
   freq: number;
   min?: number;
   max?: number;
+  length?: number;
   dynamicSag?: boolean;
 }
 
@@ -73,7 +74,10 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
 
   const highlightLine = useMemo<NormalizedPoint[] | null>(() => {
     if (!highlight) return null;
-    const seriesLine = chartData[highlight.seriesIndex];
+    const dataIndex = lineMetadata.findIndex(
+      (m) => m.seriesIndex === highlight.seriesIndex && !m.isSag,
+    );
+    const seriesLine = dataIndex >= 0 ? chartData[dataIndex] : undefined;
     if (!seriesLine || seriesLine.length === 0) return null;
 
     const start = Math.max(
