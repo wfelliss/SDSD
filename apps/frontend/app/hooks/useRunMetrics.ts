@@ -11,7 +11,7 @@ export const BOTTOM_OUT_TRAVEL_MIN = 95;
 export const BOTTOM_OUT_COUNT_THRESHOLD = 3;
 const OFF_GROUND_TRAVEL_MAX = 5;
 
-function getNormalizedSuspensionData(
+export function getNormalizedSuspensionData(
   run: Run,
   jsonData: Record<number, RunJson>,
   type: 'front' | 'rear',
@@ -37,7 +37,7 @@ function getNormalizedSuspensionData(
   return normalized.length === 0 ? null : normalized;
 }
 
-function dynamicSag(norm: number[] | null): number | null {
+export function dynamicSag(norm: number[] | null): number | null {
   if (!norm) return null;
   const sorted = [...norm].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -46,12 +46,12 @@ function dynamicSag(norm: number[] | null): number | null {
     : sorted[mid]!;
 }
 
-function zonePercent(norm: number[] | null, lo: number, hi: number): number | null {
+export function zonePercent(norm: number[] | null, lo: number, hi: number): number | null {
   if (!norm) return null;
   return (norm.filter(v => v >= lo && v <= hi).length / norm.length) * 100;
 }
 
-function zoneSeconds(
+export function zoneSeconds(
   norm: number[] | null,
   freq: number | null,
   lo: number,
@@ -61,12 +61,12 @@ function zoneSeconds(
   return norm.filter(v => v >= lo && v <= hi).length / freq;
 }
 
-function maxTravel(norm: number[] | null): number | null {
+export function maxTravel(norm: number[] | null): number | null {
   if (!norm || norm.length === 0) return null;
   return norm.reduce((max, v) => (v > max ? v : max), -Infinity);
 }
 
-function countZoneEntries(norm: number[] | null, lo: number, hi: number): number | null {
+export function countZoneEntries(norm: number[] | null, lo: number, hi: number): number | null {
   if (!norm || norm.length === 0) return null;
   let count = 0;
   let inZone = norm[0]! >= lo && norm[0]! <= hi;
