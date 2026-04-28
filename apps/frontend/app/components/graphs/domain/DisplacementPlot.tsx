@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { LinePlot } from "../base/LinePlot";
+import { useIsMobile } from "../../../hooks/useIsMobile";
 import {
   calculateMovingAverage,
   processLinePlotData,
@@ -44,6 +45,8 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
   height = 300,
   highlight,
 }) => {
+  const isMobile = useIsMobile();
+
   // Build plot lines for each series and optional smoothed sag overlays.
   const { chartData, lineMetadata } = useMemo(() => {
     const lines: NormalizedPoint[][] = [];
@@ -137,6 +140,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
           height={height}
           styleForSeries={(i) => {
             const meta = lineMetadata[i];
+            const strokeWidth = isMobile ? 0.75 : 1.5;
             if (highlightLine && i === chartData.length) {
               return {
                 stroke: "#111827",
@@ -149,6 +153,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
             if (!meta) {
               return {
                 stroke: getSeriesColor(i),
+                strokeWidth,
               };
             }
 
@@ -158,6 +163,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
                 series[meta.seriesIndex]?.color,
               ),
               opacity: meta.isSag ? 0.35 : 1,
+              strokeWidth,
             };
           }}
         />

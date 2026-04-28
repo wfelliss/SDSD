@@ -150,6 +150,7 @@ export function MainContent({
 
             <SectionDivider />
 
+            {/* Always visible: Histogram */}
             <HistogramSection
               selected={runs}
               jsonData={jsonData}

@@ -7,8 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { IS_PUBLIC_KEY, IS_API_KEY_AUTH } from './decorator';
-import { ApiKeyService } from './api-key.service';
+import { IS_PUBLIC_KEY } from './decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -17,7 +16,6 @@ export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
-    private apiKeyService: ApiKeyService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,22 +27,9 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const isApiKeyAuth = this.reflector.getAllAndOverride<boolean>(IS_API_KEY_AUTH, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isApiKeyAuth) {
-      const request = context.switchToHttp().getRequest();
-      const apiKey = request.headers['x-api-key'] as string | undefined;
-      if (!apiKey || !this.apiKeyService.validate(apiKey)) {
-        this.logger.warn('API key validation failed');
-        throw new UnauthorizedException();
-      }
-      return true;
-    }
-
     const request = context.switchToHttp().getRequest();
-    const token = request.cookies?.access_token;
+    const token =
+      request.cookies?.access_token ?? this.extractBearerToken(request);
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -56,5 +41,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     return true;
+  }
+
+  private extractBearerToken(request: Record<string, any>): string | undefined {
+    const authHeader = request.headers?.authorization as string | undefined;
+    if (!authHeader) return undefined;
+    const [scheme, token] = authHeader.split(' ');
+    if (scheme?.toLowerCase() !== 'bearer' || !token) return undefined;
+    return token;
   }
 }

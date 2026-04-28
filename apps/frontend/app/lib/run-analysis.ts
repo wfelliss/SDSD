@@ -28,7 +28,7 @@ export interface SuspensionActivity extends VelocityReading {
   type: "rebound" | "compression"
 }
 
-function convertToMillis(reading: RawReading, suspensionLength: number, min: number, max: number): Reading {
+function convertDisplacementToMm(reading: RawReading, suspensionLength: number, min: number, max: number): Reading {
 
   const displacementPercentage = (reading.displacement - min) / (max - min)
   const displacementInMilis = suspensionLength * displacementPercentage
@@ -41,7 +41,7 @@ function displacementToVelocity(reading: Reading, nextReading: Reading): Velocit
   const displacement = nextReading.displacement - reading.displacement
   const duration = nextReading.time - reading.time
 
-  const velocity = displacement / duration
+  const velocity = duration === 0 ? 0 : displacement / duration
 
   const time = { duration, start: reading.time, end: nextReading.time }
   const travel = { start: reading.displacement, end: nextReading.displacement }
@@ -59,9 +59,9 @@ export function processCompressions(
 
   const dataStandardized: RawReading[] = standardizeData(data, freq).map(point => ({ displacement: point.val, time: point.time }))
 
-  const dataInMillis: Reading[] = dataStandardized.map((rawReading) => convertToMillis(rawReading, length, min, max))
+  const dataInMm: Reading[] = dataStandardized.map((rawReading) => convertDisplacementToMm(rawReading, length, min, max))
 
-  const velocities = dataInMillis.slice(0, -1).map((reading, i) => displacementToVelocity(reading, dataInMillis[i + 1]!))
+  const velocities = dataInMm.slice(0, -1).map((reading, i) => displacementToVelocity(reading, dataInMm[i + 1]!))
 
   const activity: SuspensionActivity[] = []
 
@@ -98,7 +98,7 @@ export function processCompressions(
     activity.push({
       type: isCompression ? "compression" : "rebound",
       displacement: totalDisplacement,
-      velocity: totalDisplacement / totalDuration,
+      velocity: totalDuration === 0 ? 0 : totalDisplacement / totalDuration,
       time: {
         start: startTime,
         end: endTime,
