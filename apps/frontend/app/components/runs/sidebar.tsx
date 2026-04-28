@@ -7,22 +7,22 @@ import { useState, useMemo } from "react";
 // ----------------- Sidebar Menu Button -----------------
 interface SidebarMenuButtonProps {
   run: Run;
-  selected: Run[];
-  setSelected: (runs: Run[]) => void;
+  selectedRunIds: number[];
+  setSelectedRunIds: (ids: number[]) => void;
 }
 
 function SidebarMenuButton({
   run,
-  selected,
-  setSelected,
+  selectedRunIds,
+  setSelectedRunIds,
 }: SidebarMenuButtonProps) {
-  const isSelected = selected.some((r) => r.id === run.id);
+  const isSelected = selectedRunIds.includes(run.id);
 
   const toggle = () => {
     if (isSelected) {
-      setSelected(selected.filter((r) => r.id !== run.id));
-    } else if (selected.length < 2) {
-      setSelected([...selected, run]);
+      setSelectedRunIds(selectedRunIds.filter((id) => id !== run.id));
+    } else if (selectedRunIds.length < 2) {
+      setSelectedRunIds([...selectedRunIds, run.id]);
     }
   };
 
@@ -52,14 +52,14 @@ function SidebarMenuButton({
 interface DateGroupProps {
   date: string;
   runs: Run[];
-  selected: Run[];
-  setSelected: (runs: Run[]) => void;
+  selectedRunIds: number[];
+  setSelectedRunIds: (ids: number[]) => void;
 }
 
-const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
+const DateGroup = ({ date, runs, selectedRunIds, setSelectedRunIds }: DateGroupProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const hasSelectedRuns = runs.some(run => selected.some(r => r.id === run.id));
+  const hasSelectedRuns = runs.some((run) => selectedRunIds.includes(run.id));
 
   return (
     <li className="flex flex-col gap-1">
@@ -93,7 +93,7 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="flex flex-col pl-2 border-l border-slate-200 ml-3 gap-1 overflow-hidden"
           >
-            {(isOpen ? runs : runs.filter(run => selected.some(r => r.id === run.id)))
+            {(isOpen ? runs : runs.filter((run) => selectedRunIds.includes(run.id)))
               .map(run => (
                 <motion.li
                   key={run.id}
@@ -103,7 +103,7 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <SidebarMenuButton run={run} selected={selected} setSelected={setSelected} />
+                  <SidebarMenuButton run={run} selectedRunIds={selectedRunIds} setSelectedRunIds={setSelectedRunIds} />
                 </motion.li>
               ))}
           </motion.ul>
@@ -116,11 +116,11 @@ const DateGroup = ({ date, runs, selected, setSelected }: DateGroupProps) => {
 // ----------------- Sidebar -----------------
 interface SidebarProps {
   runs: Run[];
-  selected: Run[];
-  setSelected: (runs: Run[]) => void;
+  selectedRunIds: number[];
+  setSelectedRunIds: (ids: number[]) => void;
 }
 
-export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
+export function Sidebar({ runs, selectedRunIds, setSelectedRunIds }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -130,11 +130,11 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
     const q = query.toLowerCase();
   
     return runs.filter((run) =>
-      selected.some((r) => r.id === run.id) ||
+      selectedRunIds.includes(run.id) ||
       (run.title ?? "").toLowerCase().includes(q) ||
       (run.location ?? "").toLowerCase().includes(q)
     );
-  }, [runs, query,selected]);
+  }, [runs, query, selectedRunIds]);
   // Group runs by date and return a sorted array of groups (newest first).
   const groupedRuns = useMemo(() => {
     const groups: Record<string, { dateObj: Date | null; runs: Run[] }> = {};
@@ -235,8 +235,8 @@ export function Sidebar({ runs, selected, setSelected }: SidebarProps) {
                         key={group.dateKey}
                         date={group.dateKey}
                         runs={group.runs}
-                        selected={selected}
-                        setSelected={setSelected}
+                        selectedRunIds={selectedRunIds}
+                        setSelectedRunIds={setSelectedRunIds}
                       />
                     ))
                   )}

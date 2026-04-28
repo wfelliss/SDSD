@@ -1,6 +1,5 @@
-import { useLoaderData } from "react-router-dom";
-import { redirect } from "react-router";
-import { useState, useEffect } from "react";
+import { redirect, useLoaderData } from "react-router";
+import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "../components/runs/sidebar";
 import { MainContent } from "app/components/runs/main-content";
 import { RunJson } from "app/types/runs";
@@ -31,20 +30,45 @@ clientLoader.hydrate = true as const;
 
 // ---------------------- MAIN PAGE COMPONENT ----------------------
 export default function Runs() {
-  const { runs } = useLoaderData<typeof clientLoader>();
-
-  const [selected, setSelected] = useState<Run[]>([]);
+  const { runs: initialRuns } = useLoaderData<typeof clientLoader>();
+  const [runs, setRuns] = useState<Run[]>(initialRuns);
+  const [selectedRunIds, setSelectedRunIds] = useState<number[]>([]);
   const [jsonData, setJsonData] = useState<Record<number, RunJson>>({});
   const [loadingRuns, setLoadingRuns] = useState<Set<number>>(new Set());
 
+  const runsById = useMemo(
+    () => new Map(runs.map((run) => [run.id, run])),
+    [runs],
+  );
+  const selected = useMemo(
+    () => selectedRunIds.map((id) => runsById.get(id)).filter((run): run is Run => Boolean(run)),
+    [selectedRunIds, runsById],
+  );
   const isCompareMode = selected.length > 1;
   const loadingJson = loadingRuns.size > 0;
+
+  useEffect(() => {
+    setSelectedRunIds((prevIds) => prevIds.filter((id) => runsById.has(id)));
+  }, [runsById]);
+
+  useEffect(() => {
+    const selectedIdSet = new Set(selectedRunIds);
+    setJsonData((prev) => {
+      const nextEntries = Object.entries(prev).filter(([id]) => selectedIdSet.has(Number(id)));
+      return Object.fromEntries(nextEntries);
+    });
+  }, [selectedRunIds]);
 
   // Auth check is handled in the loader above — no need to repeat it here.
 
   // ----------------- Fetch JSON for selected runs -----------------
   useEffect(() => {
     const fetchJson = async (run: Run) => {
+      // Check if already loading or already fetched (double-check inside async)
+      if (loadingRuns.has(run.id) || jsonData[run.id]) {
+        return;
+      }
+
       setLoadingRuns((prev) => new Set(prev).add(run.id));
       try {
         const files = await getFile(run.srcPath);
@@ -66,18 +90,25 @@ export default function Runs() {
     };
 
     selected.forEach((run) => {
-      if (!jsonData[run.id]) fetchJson(run);
+      if (!jsonData[run.id] && !loadingRuns.has(run.id)) {
+        fetchJson(run);
+      }
     });
-  }, [selected, jsonData]);
+  }, [selected, jsonData, loadingRuns]);
 
   return (
     <div className="flex h-screen">
-      <Sidebar runs={runs} selected={selected} setSelected={setSelected} />
+      <Sidebar runs={runs} selectedRunIds={selectedRunIds} setSelectedRunIds={setSelectedRunIds} />
       <MainContent
         selected={selected}
         jsonData={jsonData}
         loadingJson={loadingJson}
         isCompareMode={isCompareMode}
+        onRunUpdate={(id, updates) => {
+          setRuns((prevRuns) =>
+            prevRuns.map((r) => (r.id === id ? { ...r, ...updates } : r))
+          );
+        }}
       />
     </div>
   );
