@@ -48,10 +48,6 @@ export default function Runs() {
   const loadingJson = loadingRuns.size > 0;
 
   useEffect(() => {
-    setSelectedRunIds((prevIds) => prevIds.filter((id) => runsById.has(id)));
-  }, [runsById]);
-
-  useEffect(() => {
     const selectedIdSet = new Set(selectedRunIds);
     setJsonData((prev) => {
       const nextEntries = Object.entries(prev).filter(([id]) => selectedIdSet.has(Number(id)));
@@ -100,7 +96,7 @@ export default function Runs() {
     <div className="flex h-screen">
       <Sidebar runs={runs} selectedRunIds={selectedRunIds} setSelectedRunIds={setSelectedRunIds} />
       <MainContent
-        selected={selected}
+        selected={selected.map((s) => runs.find((r) => r.id === s.id) || s)}
         jsonData={jsonData}
         loadingJson={loadingJson}
         isCompareMode={isCompareMode}

@@ -1,6 +1,12 @@
 import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
+import {
+  RawSuspensionData,
+  normalizeToPercentage,
+  getProfileFromRun,
+  trimRawDataByBounds,
+} from "app/lib/telemetryUtils";
 import { cn } from "app/lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useRunMetrics, DYNAMIC_SAG_IDEAL_MIN_FRONT, DYNAMIC_SAG_IDEAL_MAX_FRONT, DYNAMIC_SAG_IDEAL_MIN_REAR, DYNAMIC_SAG_IDEAL_MAX_REAR, BOTTOM_OUT_COUNT_THRESHOLD, BOTTOM_OUT_TRAVEL_MIN } from "app/hooks/useRunMetrics";
@@ -9,6 +15,56 @@ interface SummarySectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
+}
+
+function getNormalizedSuspensionData(
+  run: Run,
+  jsonData: Record<number, RunJson>,
+  type: 'front' | 'rear',
+): number[] | null {
+  const suspensionData: RawSuspensionData[] | undefined =
+    jsonData[run.id]?.data?.suspension?.[type === 'front' ? 'front_sus' : 'rear_sus'];
+  if (!suspensionData || suspensionData.length === 0) return null;
+
+  const trimmedSuspensionData = trimRawDataByBounds(run, suspensionData);
+  if (trimmedSuspensionData.length === 0) return null;
+
+  const profile = getProfileFromRun(run);
+  const min = profile ? (type === 'front' ? profile.front_min : profile.back_min) : undefined;
+  const max = profile ? (type === 'front' ? profile.front_max : profile.back_max) : undefined;
+
+  const normalized = trimmedSuspensionData
+    .map(p => {
+      const val = typeof p === 'number' ? p : Number(p.displacement ?? 0);
+      return normalizeToPercentage(val, min, max);
+    })
+    .filter(v => isFinite(v));
+
+  return normalized.length === 0 ? null : normalized;
+}
+
+function dynamicSag(norm: number[] | null): number | null {
+  if (!norm) return null;
+  const sorted = [...norm].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1]! + sorted[mid]!) / 2
+    : sorted[mid]!;
+}
+
+function zonePercent(norm: number[] | null, lo: number, hi: number): number | null {
+  if (!norm) return null;
+  return (norm.filter(v => v >= lo && v <= hi).length / norm.length) * 100;
+}
+
+function zoneSeconds(
+  norm: number[] | null,
+  freq: number | null,
+  lo: number,
+  hi: number,
+): number | null {
+  if (!norm || !freq) return null;
+  return norm.filter(v => v >= lo && v <= hi).length / freq;
 }
 
 interface SagCellProps {

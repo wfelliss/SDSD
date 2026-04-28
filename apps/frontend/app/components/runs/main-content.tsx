@@ -145,14 +145,15 @@ export function MainContent({
                 {isCompareMode ? "Run Comparison" : runs[0]?.title || "Run Details"}
               </h1>
               <div className="flex items-center gap-2">
-                <button
-                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-                  onClick={() => setTrimOpen(true)}
-                  disabled={isCompareMode}
-                  title={isCompareMode ? "Trim editor is available in single-run mode only" : "Trim run bounds"}
-                >
-                  <Scissors className="size-5" />
-                </button>
+                {!isCompareMode && (
+                  <button
+                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+                    onClick={() => setTrimOpen(true)}
+                    title="Trim run bounds"
+                  >
+                    <Scissors className="size-5" />
+                  </button>
+                )}
                 <button 
                   className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
                   onClick={() => setIsPopupOpen(true)}
