@@ -14,6 +14,19 @@ export interface NormalizedPoint {
   y: number; 
 }
 
+export interface RunTrimBounds {
+  lowerBoundIdx: number;
+  upperBoundIdx: number;
+}
+
+function parseBound(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    return null;
+  }
+
+  return value;
+}
+
 export function getProfileFromRun(run: Run): Profile | null {
   const profileCandidate = (run as Run & { profile?: unknown }).profile;
   if (
@@ -25,6 +38,48 @@ export function getProfileFromRun(run: Run): Profile | null {
     !("back_max" in profileCandidate)
   ) return null;
   return profileCandidate as Profile;
+}
+
+export function resolveTrimBounds(run: Run, sampleLength: number): RunTrimBounds | null {
+  if (!Number.isFinite(sampleLength) || sampleLength <= 0) {
+    return null;
+  }
+
+  if (!Number.isFinite(run.length) || run.length <= 0) {
+    return { lowerBoundIdx: 0, upperBoundIdx: sampleLength - 1 };
+  }
+
+  const runWithBounds = run as Run & {
+    lower_bound_idx?: unknown;
+    upper_bound_idx?: unknown;
+  };
+
+  const lastIndex = sampleLength - 1;
+  const scale = sampleLength / run.length;
+  const rawLower = runWithBounds.lower_bound_idx;
+  const rawUpper = runWithBounds.upper_bound_idx;
+
+  const parsedLower = parseBound(rawLower) ?? 0;
+  const parsedUpper = parseBound(rawUpper) ?? (run.length - 1);
+
+  const lowerBoundIdx = Math.min(Math.max(Math.round(parsedLower * scale), 0), lastIndex);
+  const clampedUpper = Math.min(Math.max(Math.round(parsedUpper * scale), 0), lastIndex);
+  const upperBoundIdx = Math.max(clampedUpper, lowerBoundIdx);
+
+  return { lowerBoundIdx, upperBoundIdx };
+}
+
+export function trimRawDataByBounds<T>(run: Run, dataArr: T[]): T[] {
+  if (!Array.isArray(dataArr) || dataArr.length === 0) {
+    return [];
+  }
+
+  const bounds = resolveTrimBounds(run, dataArr.length);
+  if (!bounds) {
+    return [];
+  }
+
+  return dataArr.slice(bounds.lowerBoundIdx, bounds.upperBoundIdx + 1);
 }
 
 export function normalizeToPercentage(val: number, min?: number, max?: number): number {
@@ -41,14 +96,18 @@ export function normalizeToPercentage(val: number, min?: number, max?: number): 
   return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : 0;
 }
 
-export function standardizeData(dataArr: RawSuspensionData[], freq: number): StandardizedPoint[] {
+export function standardizeData(
+  dataArr: RawSuspensionData[],
+  freq: number,
+  indexOffset: number = 0,
+): StandardizedPoint[] {
   if (!Array.isArray(dataArr)) return [];
-  
+
   return dataArr.map((p, i) => {
     let val = 0;
-    let time = i / freq; 
+    let time = (i + indexOffset) / freq;
 
-    if (typeof p === 'number') {
+    if (typeof p === "number") {
       val = p;
     } else {
       val = Number(p.displacement ?? 0);
@@ -56,19 +115,24 @@ export function standardizeData(dataArr: RawSuspensionData[], freq: number): Sta
         time = Number(p.timebase);
       }
     }
-    
+
     return { time, val };
   });
 }
 
-
 // DisplacementPlot - Standardizes raw suspension data and maps it into normalized time-series points.
-export function processLinePlotData(dataArr: RawSuspensionData[], freq: number, min?: number, max?: number): NormalizedPoint[] {
-  const cleanData = standardizeData(dataArr, freq);
+export function processLinePlotData(
+  dataArr: RawSuspensionData[],
+  freq: number,
+  min?: number,
+  max?: number,
+  indexOffset: number = 0,
+): NormalizedPoint[] {
+  const cleanData = standardizeData(dataArr, freq, indexOffset);
 
-  return cleanData.map(point => ({
+  return cleanData.map((point) => ({
     x: point.time,
-    y: normalizeToPercentage(point.val, min, max)
+    y: normalizeToPercentage(point.val, min, max),
   }));
 }
 
