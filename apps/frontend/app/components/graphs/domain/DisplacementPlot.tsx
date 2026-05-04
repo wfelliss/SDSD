@@ -31,12 +31,9 @@ interface DisplacementPlotProps {
   title?: string;
   series: SeriesConfig[];
   height?: number;
-<<<<<<< HEAD
   highlight?: LineHighlight | null;
-=======
   brushSelection?: [number, number] | null;
   onBrushSelection?: (selection: [number, number] | null) => void;
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 }
 
 interface LineMetadata {
@@ -49,12 +46,9 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
   title = "Displacement",
   series,
   height = 300,
-<<<<<<< HEAD
   highlight,
-=======
   brushSelection,
   onBrushSelection,
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 }) => {
   const isMobile = useIsMobile();
 
@@ -184,8 +178,4 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
       </div>
     </section>
   );
-<<<<<<< HEAD
-};
-=======
 });
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387

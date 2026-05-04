@@ -9,17 +9,13 @@ import { ReboundCompressionPlot } from "app/components/graphs/domain/ReboundComp
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
 import { getSeriesColor } from "app/lib/graphColors";
-<<<<<<< HEAD
-import { getProfileFromRun } from "app/lib/telemetryUtils";
-import { useState } from "react";
-=======
 import {
   getProfileFromRun,
   RawSuspensionData,
   resolveTrimBounds,
   trimRawDataByBounds,
 } from "app/lib/telemetryUtils";
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
+import { useState } from "react";
 
 interface ChartSectionProps {
   selected: Run[];

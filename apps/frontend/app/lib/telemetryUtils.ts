@@ -57,13 +57,6 @@ export function getProfileFromRun(run: Run): Profile | null {
   return profileCandidate as Profile;
 }
 
-<<<<<<< HEAD
-export function normalizeToPercentage(
-  val: number,
-  min?: number,
-  max?: number,
-): number {
-=======
 export function resolveTrimBounds(run: Run, sampleLength: number): RunTrimBounds | null {
   if (!Number.isFinite(sampleLength) || sampleLength <= 0) {
     return null;
@@ -107,7 +100,6 @@ export function trimRawDataByBounds<T>(run: Run, dataArr: T[]): T[] {
 }
 
 export function normalizeToPercentage(val: number, min?: number, max?: number): number {
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
   // If caller provides a valid min/max range, use it; otherwise fall back to 0..MAX_TRAVEL
   const hasValidRange =
     typeof min === "number" &&
@@ -129,20 +121,13 @@ export function normalizeToPercentage(val: number, min?: number, max?: number): 
 export function standardizeData(
   dataArr: RawSuspensionData[],
   freq: number,
-<<<<<<< HEAD
-=======
   indexOffset: number = 0,
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 ): StandardizedPoint[] {
   if (!Array.isArray(dataArr)) return [];
 
   return dataArr.map((p, i) => {
     let val = 0;
-<<<<<<< HEAD
-    let time = i / freq;
-=======
     let time = (i + indexOffset) / freq;
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
     if (typeof p === "number") {
       val = p;
@@ -163,14 +148,9 @@ export function processLinePlotData(
   freq: number,
   min?: number,
   max?: number,
-<<<<<<< HEAD
-): NormalizedPoint[] {
-  const cleanData = standardizeData(dataArr, freq);
-=======
   indexOffset: number = 0,
 ): NormalizedPoint[] {
   const cleanData = standardizeData(dataArr, freq, indexOffset);
->>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
   return cleanData.map((point) => ({
     x: point.time,
