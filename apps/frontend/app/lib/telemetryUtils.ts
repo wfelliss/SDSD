@@ -3,15 +3,31 @@ import { Profile, Run } from "@repo/database";
 export const MAX_TRAVEL = 4096;
 const WINDOWMS = 600;
 
-export type RawSuspensionData = number | { displacement: number; timebase?: number };
+export type RawSuspensionData =
+  | number
+  | { displacement: number; timebase?: number };
 
 export interface StandardizedPoint {
   time: number;
-  val: number; 
+  val: number;
 }
 export interface NormalizedPoint {
-  x: number; 
-  y: number; 
+  x: number;
+  y: number;
+}
+
+export interface VelocitySample {
+  index: number;
+  time: number;
+  displacement: number;
+  normalized: number;
+  velocity: number;
+  speed: number;
+}
+
+export interface LinePoint {
+  x: number;
+  y: number;
 }
 
 export interface RunTrimBounds {
@@ -36,7 +52,8 @@ export function getProfileFromRun(run: Run): Profile | null {
     !("front_max" in profileCandidate) ||
     !("back_min" in profileCandidate) ||
     !("back_max" in profileCandidate)
-  ) return null;
+  )
+    return null;
   return profileCandidate as Profile;
 }
 
@@ -84,7 +101,12 @@ export function trimRawDataByBounds<T>(run: Run, dataArr: T[]): T[] {
 
 export function normalizeToPercentage(val: number, min?: number, max?: number): number {
   // If caller provides a valid min/max range, use it; otherwise fall back to 0..MAX_TRAVEL
-  const hasValidRange = typeof min === 'number' && typeof max === 'number' && isFinite(min) && isFinite(max) && max > min;
+  const hasValidRange =
+    typeof min === "number" &&
+    typeof max === "number" &&
+    isFinite(min) &&
+    isFinite(max) &&
+    max > min;
 
   if (!hasValidRange) {
     const result = (val / MAX_TRAVEL) * 100;
@@ -137,30 +159,35 @@ export function processLinePlotData(
 }
 
 // TravelHistogram - Normalise displacement values for histogram distribution
-export const processHistogramData = (dataArr: RawSuspensionData[], min?: number, max?: number): number[] => {
+export const processHistogramData = (
+  dataArr: RawSuspensionData[],
+  min?: number,
+  max?: number,
+): number[] => {
   if (!Array.isArray(dataArr)) return [];
 
-  return dataArr.map(p => {
-    let val = 0;
-    if (typeof p === 'number') {
-      val = p;
-    } else {
-      val = Number(p.displacement ?? 0);
-    }
-    return normalizeToPercentage(val, min, max);
-  }).filter(v => !isNaN(v) && isFinite(v));
+  return dataArr
+    .map((p) => {
+      let val = 0;
+      if (typeof p === "number") {
+        val = p;
+      } else {
+        val = Number(p.displacement ?? 0);
+      }
+      return normalizeToPercentage(val, min, max);
+    })
+    .filter((v) => !isNaN(v) && isFinite(v));
 };
 
 // DynamicSagPlot - Moving average (over set time window)
 export function calculateMovingAverage(
-  data: NormalizedPoint[], 
-  freq: number, 
+  data: NormalizedPoint[],
+  freq: number,
 ): NormalizedPoint[] {
-
   const windowSize = Math.max(1, Math.floor((WINDOWMS / 1000) * freq));
   if (data.length < windowSize) return [];
 
-  const halfWindowX = (WINDOWMS / 1000) / 2;  // centre x axis offset
+  const halfWindowX = WINDOWMS / 1000 / 2; // centre x axis offset
   const result: NormalizedPoint[] = [];
 
   // Initial sum
@@ -173,7 +200,7 @@ export function calculateMovingAverage(
   // First centered point
   result.push({
     x: data[windowSize - 1]!.x - halfWindowX,
-    y: currentSum / windowSize
+    y: currentSum / windowSize,
   });
 
   // Sliding window
@@ -186,11 +213,102 @@ export function calculateMovingAverage(
 
     result.push({
       x: inPt.x - halfWindowX,
-      y: currentSum / windowSize
+      y: currentSum / windowSize,
     });
   }
 
   return result;
+}
+
+
+// Velocity samples (mm/s) derived from displacement time-series.
+export function buildVelocitySamples(
+  dataArr: RawSuspensionData[],
+  freq: number,
+  min?: number,
+  max?: number,
+): VelocitySample[] {
+  const cleanData = standardizeData(dataArr, freq);
+  if (cleanData.length < 2) return [];
+
+  const samples: VelocitySample[] = [];
+
+  for (let i = 1; i < cleanData.length; i++) {
+    const prev = cleanData[i - 1];
+    const curr = cleanData[i];
+    if (!prev || !curr) continue;
+
+    const dt = curr.time - prev.time;
+    if (!Number.isFinite(dt) || dt <= 0) continue;
+
+    const displacement = curr.val;
+    const velocity = (curr.val - prev.val) / dt;
+    if (!Number.isFinite(velocity)) continue;
+
+    const normalized = normalizeToPercentage(displacement, min, max);
+
+    samples.push({
+      index: i,
+      time: curr.time,
+      displacement,
+      normalized,
+      velocity,
+      speed: Math.abs(velocity),
+    });
+  }
+
+  return samples;
+}
+
+export function fitLine(
+  points: LinePoint[],
+): { slope: number; intercept: number } | null {
+  if (!points || points.length < 2) return null;
+
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumXX = 0;
+  const n = points.length;
+
+  for (const pt of points) {
+    if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) continue;
+    sumX += pt.x;
+    sumY += pt.y;
+    sumXY += pt.x * pt.y;
+    sumXX += pt.x * pt.x;
+  }
+
+  const denominator = n * sumXX - sumX * sumX;
+  if (!Number.isFinite(denominator) || denominator === 0) return null;
+
+  const slope = (n * sumXY - sumX * sumY) / denominator;
+  const intercept = (sumY - slope * sumX) / n;
+  if (!Number.isFinite(slope) || !Number.isFinite(intercept)) return null;
+
+  return { slope, intercept };
+}
+
+export function buildLineFromPoints(points: LinePoint[]): LinePoint[] {
+  const fit = fitLine(points);
+  if (!fit) return [];
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+
+  for (const pt of points) {
+    if (!Number.isFinite(pt.x)) continue;
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+  }
+
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX)
+    return [];
+
+  return [
+    { x: minX, y: fit.slope * minX + fit.intercept },
+    { x: maxX, y: fit.slope * maxX + fit.intercept },
+  ];
 }
 
 /**

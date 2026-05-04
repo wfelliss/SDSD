@@ -47,7 +47,7 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
   const isApplyingExternalSelectionRef = useRef(false);
   const latestBrushSelectionRef = useRef<[number, number] | null>(null);
 
-  // Threshold for downsampling 
+  // Threshold for downsampling
   const downsampleThreshold = Math.max(500, Math.floor(innerWidthForDownsample));
   const focusData = useMemo(
     () => data.map((series) => lttbDownsample(series, downsampleThreshold)),
@@ -57,7 +57,7 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
     () => data.map((series) => lttbDownsample(series, 500)),
     [data],
   );
-  
+
   // Persist scales for brush
   const scalesRef = useRef({
     x: d3.scaleLinear(),
@@ -107,7 +107,8 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
     } else {
       const allPoints = focusData.flat();
       const xExtent = d3.extent(allPoints, (d) => d.x);
-      finalXDomain = xExtent[0] !== undefined ? xExtent as [number, number] : [0, 100];
+      finalXDomain =
+        xExtent[0] !== undefined ? (xExtent as [number, number]) : [0, 100];
     }
 
     // Update scales
@@ -166,6 +167,7 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
 
         svg.select<SVGGElement>(".focus .x-axis").call(d3.axisBottom(x));
       });
+
     };
 
     // Emit selection to React only when brushing ends
@@ -189,7 +191,9 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
     svg.selectAll("defs").data([null]).join("defs")
       .selectAll("clipPath").data([null]).join("clipPath")
       .attr("id", clipPathId)
-      .selectAll("rect").data([null]).join("rect")
+      .selectAll("rect")
+      .data([null])
+      .join("rect")
       .attr("width", innerWidth)
       .attr("height", innerHeight);
 
@@ -208,7 +212,8 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .attr("transform", `translate(${margin2.left},${margin2.top})`);
 
     // Focus X Axis
-    focus.selectAll<SVGGElement, null>(".x-axis")
+    focus
+      .selectAll<SVGGElement, null>(".x-axis")
       .data([null])
       .join("g")
       .attr("class", "x-axis axis text-muted-foreground text-xs")
@@ -216,14 +221,16 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .call(d3.axisBottom(x) as d3.Axis<number>);
 
     // Focus Y Axis
-    focus.selectAll<SVGGElement, null>(".y-axis")
+    focus
+      .selectAll<SVGGElement, null>(".y-axis")
       .data([null])
       .join("g")
       .attr("class", "y-axis axis text-muted-foreground text-xs")
       .call(d3.axisLeft(y).ticks(5) as d3.Axis<number>);
 
     // Context X Axis
-    context.selectAll<SVGGElement, null>(".x-axis")
+    context
+      .selectAll<SVGGElement, null>(".x-axis")
       .data([null])
       .join("g")
       .attr("class", "x-axis axis text-muted-foreground text-xs")
@@ -235,18 +242,23 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .x((d) => x(d.x))
       .y((d) => y(d.y))
       .curve(d3.curveMonotoneX);
-    const lineGenerator2 = d3.line<DataPoint>()
+    const lineGenerator2 = d3
+      .line<DataPoint>()
       .x((d) => x2(d.x))
       .y((d) => y2(d.y))
       .curve(d3.curveMonotoneX);
 
     // Focus lines
+
     focus.selectAll<SVGPathElement, DataPoint[]>(".line-path")
       .data(buildVisibleData(selectedDomainRef.current))
       .join("path")
       .attr("clip-path", `url(#${clipPathId})`)
       .attr("class", "line-path")
-      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style(
+        "stroke",
+        (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null,
+      )
       .style("opacity", (_, i) => {
         const opacity = styleForSeries?.(i)?.opacity;
         return typeof opacity === "number" ? opacity : null;
@@ -254,6 +266,14 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .style("stroke-width", (_, i) => {
         const strokeWidth = styleForSeries?.(i)?.strokeWidth;
         return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
+      .style("stroke-dasharray", (_, i) => {
+        const dash = styleForSeries?.(i)?.strokeDasharray;
+        return dash !== undefined ? dash.toString() : null;
+      })
+      .style("stroke-linecap", (_, i) => {
+        const linecap = styleForSeries?.(i)?.strokeLinecap;
+        return linecap !== undefined ? linecap.toString() : null;
       })
       .attr("d", lineGenerator);
 
@@ -262,7 +282,10 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .data(contextData)
       .join("path")
       .attr("class", "line-context")
-      .style("stroke", (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null)
+      .style(
+        "stroke",
+        (_, i) => styleForSeries?.(i)?.stroke?.toString() ?? null,
+      )
       .style("opacity", (_, i) => {
         const opacity = styleForSeries?.(i)?.opacity;
         return typeof opacity === "number" ? opacity : null;
@@ -270,6 +293,14 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .style("stroke-width", (_, i) => {
         const strokeWidth = styleForSeries?.(i)?.strokeWidth;
         return strokeWidth !== undefined ? strokeWidth.toString() : null;
+      })
+      .style("stroke-dasharray", (_, i) => {
+        const dash = styleForSeries?.(i)?.strokeDasharray;
+        return dash !== undefined ? dash.toString() : null;
+      })
+      .style("stroke-linecap", (_, i) => {
+        const linecap = styleForSeries?.(i)?.strokeLinecap;
+        return linecap !== undefined ? linecap.toString() : null;
       })
       .attr("d", lineGenerator2);
 
@@ -279,7 +310,8 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
       .on("brush", brushed)
       .on("end", brushEnded);
 
-    context.selectAll<SVGGElement, null>(".brush")
+    context
+      .selectAll<SVGGElement, null>(".brush")
       .data([null])
       .join("g")
       .attr("class", "brush")
@@ -345,8 +377,18 @@ export const LinePlot: React.FC<LinePlotProps> = React.memo(({
   }, [brushSelection, data.length, width]);
 
   return (
-    <div ref={containerRef} className={`w-full bg-card rounded-lg ${className}`}>
-      {width > 0 && <svg ref={svgRef} width={width} height={height} className="overflow-visible" />}
+    <div
+      ref={containerRef}
+      className={`w-full bg-card rounded-lg ${className}`}
+    >
+      {width > 0 && (
+        <svg
+          ref={svgRef}
+          width={width}
+          height={height}
+          className="overflow-visible"
+        />
+      )}
     </div>
   );
 });

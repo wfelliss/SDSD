@@ -16,14 +16,22 @@ export interface SeriesConfig {
   freq: number;
   min?: number;
   max?: number;
+  length?: number;
   dynamicSag?: boolean;
   indexOffset?: number;
+}
+
+export interface LineHighlight {
+  seriesIndex: number;
+  startIndex: number;
+  endIndex: number;
 }
 
 interface DisplacementPlotProps {
   title?: string;
   series: SeriesConfig[];
   height?: number;
+  highlight?: LineHighlight | null;
   brushSelection?: [number, number] | null;
   onBrushSelection?: (selection: [number, number] | null) => void;
 }
@@ -38,6 +46,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
   title = "Displacement",
   series,
   height = 300,
+  highlight,
   brushSelection,
   onBrushSelection,
 }) => {
@@ -72,10 +81,38 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
     return { chartData: lines, lineMetadata: metadata };
   }, [series]);
 
+  const highlightLine = useMemo<NormalizedPoint[] | null>(() => {
+    if (!highlight) return null;
+    const dataIndex = lineMetadata.findIndex(
+      (m) => m.seriesIndex === highlight.seriesIndex && !m.isSag,
+    );
+    const seriesLine = dataIndex >= 0 ? chartData[dataIndex] : undefined;
+    if (!seriesLine || seriesLine.length === 0) return null;
+
+    const start = Math.max(
+      0,
+      Math.min(seriesLine.length - 1, highlight.startIndex),
+    );
+    const end = Math.max(
+      0,
+      Math.min(seriesLine.length - 1, highlight.endIndex),
+    );
+    if (start === end) return [seriesLine[start]!];
+
+    const sliceStart = Math.min(start, end);
+    const sliceEnd = Math.max(start, end) + 1;
+    const segment = seriesLine.slice(sliceStart, sliceEnd);
+    return segment.length > 0 ? segment : null;
+  }, [highlight, chartData]);
+
   // No chart if every generated line is empty.
   const hasAnyData = chartData.some((line) => line.length > 0);
   if (!hasAnyData) {
-    return <div className="p-4 text-gray-400 italic">No data available for {title}</div>;
+    return (
+      <div className="p-4 text-gray-400 italic">
+        No data available for {title}
+      </div>
+    );
   }
 
   return (
@@ -85,8 +122,14 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
         {/* Legend for primary series (sag overlays inherit the same color). */}
         <div className="flex gap-4 text-xs">
           {series.map((s, index) => (
-            <div key={`${s.label}-${index}`} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ background: getSeriesColor(index, s.color) }}></div>
+            <div
+              key={`${s.label}-${index}`}
+              className="flex items-center gap-2"
+            >
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ background: getSeriesColor(index, s.color) }}
+              ></div>
               <span className="font-medium text-gray-600">
                 {s.label}
                 {s.dynamicSag ? " (sag)" : ""}
@@ -98,7 +141,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
 
       <div className="w-full overflow-hidden">
         <LinePlot
-          data={chartData}
+          data={highlightLine ? [...chartData, highlightLine] : chartData}
           yDomain={[0, 100]}
           height={height}
           brushSelection={brushSelection}
@@ -106,6 +149,15 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
           styleForSeries={(i) => {
             const meta = lineMetadata[i];
             const strokeWidth = isMobile ? 0.75 : 1.5;
+            if (highlightLine && i === chartData.length) {
+              return {
+                stroke: "#111827",
+                strokeWidth: 3,
+                strokeDasharray: "6 4",
+                strokeLinecap: "round",
+                opacity: 0.95,
+              };
+            }
             if (!meta) {
               return {
                 stroke: getSeriesColor(i),
@@ -114,7 +166,10 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
             }
 
             return {
-              stroke: getSeriesColor(meta.seriesIndex, series[meta.seriesIndex]?.color),
+              stroke: getSeriesColor(
+                meta.seriesIndex,
+                series[meta.seriesIndex]?.color,
+              ),
               opacity: meta.isSag ? 0.35 : 1,
               strokeWidth,
             };

@@ -7,13 +7,13 @@ import {
   EmptyState,
   LoadingState,
   SectionDivider,
-} from "app/components/ui/run-elements"; 
+} from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
 import { useState } from "react";
 import { ProfilePopup } from "../profiles/profilePopUp";
 import { UserIcon, Scissors } from "lucide-react";
 import { RunsMetadata } from "./runs-metadata";
-import { useOptimisticRuns } from "app/hooks/useOptimisticRuns"; 
+import { useOptimisticRuns } from "app/hooks/useOptimisticRuns";
 import { CommentsPopup } from "./commentsPopup";
 import { updateRun } from "app/api/runs";
 import { SummarySection } from "./summary-section";
@@ -36,7 +36,7 @@ export function MainContent({
   isCompareMode,
   onRunUpdate,
 }: MainContentProps) {
-  
+
   const { runs, handleProfileUpdate, handleRunUpdate } = useOptimisticRuns(initialSelected);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
@@ -102,7 +102,7 @@ export function MainContent({
               <ProfilePopup
                 isOpen={isPopupOpen}
                 onClose={() => setIsPopupOpen(false)}
-                selected={runs} 
+                selected={runs}
                 onProfileUpdate={handleProfileUpdate}
               />
             )}
