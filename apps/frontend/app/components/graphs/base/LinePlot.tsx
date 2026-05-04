@@ -14,28 +14,47 @@ interface LinePlotProps {
   height?: number;
   className?: string;
   styleForSeries?: (index: number) => React.CSSProperties | undefined;
+  brushSelection?: [number, number] | null;
+  onBrushSelection?: (selection: [number, number] | null) => void;
 }
 
-export const LinePlot: React.FC<LinePlotProps> = ({
+export const LinePlot: React.FC<LinePlotProps> = React.memo(({
   data,
   xDomain,
   yDomain = [0, 100],
   height = 400,
   className = "",
   styleForSeries,
+  brushSelection,
+  onBrushSelection,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const clipPathId = useId();
   const [width, setWidth] = useState(0);
 
+<<<<<<< HEAD
+=======
+  // Performance / Downsampling State
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
   const innerWidthForDownsample = Math.max(0, width);
   const fullDataRef = useRef<DataPoint[][]>([]);
   const rafRef = useRef<number | null>(null);
   const latestDomainRef = useRef<[number, number] | null>(null);
   const selectedDomainRef = useRef<[number, number] | null>(null);
 
+<<<<<<< HEAD
   // Threshold for downsampling
+=======
+  // Brush / Trim State
+  const brushRef = useRef<d3.BrushBehavior<any> | null>(null);
+  const brushGroupRef = useRef<d3.Selection<any, any, any, any> | null>(null);
+  const onBrushSelectionRef = useRef<typeof onBrushSelection>(onBrushSelection);
+  const isApplyingExternalSelectionRef = useRef(false);
+  const latestBrushSelectionRef = useRef<[number, number] | null>(null);
+
+  // Threshold for downsampling 
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
   const downsampleThreshold = Math.max(500, Math.floor(innerWidthForDownsample));
   const focusData = useMemo(
     () => data.map((series) => lttbDownsample(series, downsampleThreshold)),
@@ -53,7 +72,11 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     x2: d3.scaleLinear(),
   });
 
-  // Resize observer (under graph)
+  useEffect(() => {
+    onBrushSelectionRef.current = onBrushSelection;
+  }, [onBrushSelection]);
+
+  // Resize observer
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
@@ -118,15 +141,23 @@ export const LinePlot: React.FC<LinePlotProps> = ({
     const activeDomain = selectedDomainRef.current ?? finalXDomain;
     x.domain(activeDomain);
 
-    // Brushed interaction handler
+    // Brushed interaction handler (Downsampling version)
     const brushed = (event: d3.D3BrushEvent<unknown>) => {
       if (event.sourceEvent?.type === "zoom") return;
+<<<<<<< HEAD
 
       if (event.selection) {
         latestDomainRef.current = (event.selection as [number, number]).map(x2.invert, x2) as [number, number];
+=======
+      
+      const s = event.selection as [number, number] | null;
+      if (s) {
+        latestDomainRef.current = s.map(x2.invert, x2) as [number, number];
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
       } else {
         latestDomainRef.current = null;
       }
+
       if (rafRef.current !== null) return;
 
       rafRef.current = requestAnimationFrame(() => {
@@ -152,6 +183,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
 
     };
 
+<<<<<<< HEAD
     // Clip path (scoped per component instance)
     svg
       .selectAll("defs")
@@ -160,6 +192,28 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .selectAll("clipPath")
       .data([null])
       .join("clipPath")
+=======
+    // Emit selection to React only when brushing ends
+    const brushEnded = (event: d3.D3BrushEvent<unknown>) => {
+      if (isApplyingExternalSelectionRef.current) return;
+      if (!event.sourceEvent) return;
+
+      const s = event.selection as [number, number] | null;
+      if (!s) {
+        latestBrushSelectionRef.current = null;
+        onBrushSelectionRef.current?.(null);
+        return;
+      }
+
+      const nextSelection = s.map(x2.invert, x2) as [number, number];
+      latestBrushSelectionRef.current = nextSelection;
+      onBrushSelectionRef.current?.(nextSelection);
+    };
+
+    // Clip path
+    svg.selectAll("defs").data([null]).join("defs")
+      .selectAll("clipPath").data([null]).join("clipPath")
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
       .attr("id", clipPathId)
       .selectAll("rect")
       .data([null])
@@ -167,17 +221,27 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("width", innerWidth)
       .attr("height", innerHeight);
 
+<<<<<<< HEAD
     // Focus group (main chart)
     const focus = svg
       .selectAll<SVGGElement, null>(".focus")
+=======
+    // Focus group
+    const focus = svg.selectAll<SVGGElement, null>(".focus")
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
       .data([null])
       .join("g")
       .attr("class", "focus")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
+<<<<<<< HEAD
     // Context group (brush area)
     const context = svg
       .selectAll<SVGGElement, null>(".context")
+=======
+    // Context group
+    const context = svg.selectAll<SVGGElement, null>(".context")
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
       .data([null])
       .join("g")
       .attr("class", "context")
@@ -209,9 +273,14 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("transform", `translate(0,${innerHeight2})`)
       .call(d3.axisBottom(x2) as d3.Axis<number>);
 
+<<<<<<< HEAD
     // Line generators with curve smoothing
     const lineGenerator = d3
       .line<DataPoint>()
+=======
+    // Line generators
+    const lineGenerator = d3.line<DataPoint>()
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
       .x((d) => x(d.x))
       .y((d) => y(d.y))
       .curve(d3.curveMonotoneX);
@@ -278,6 +347,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .attr("d", lineGenerator2);
 
     // Brush
+<<<<<<< HEAD
     const brush = d3
       .brushX<null>()
       .extent([
@@ -285,6 +355,12 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         [innerWidth, innerHeight2],
       ])
       .on("brush end", brushed);
+=======
+    const brush = d3.brushX<any>()
+      .extent([[0, 0], [innerWidth, innerHeight2]])
+      .on("brush", brushed)
+      .on("end", brushEnded);
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
     context
       .selectAll<SVGGElement, null>(".brush")
@@ -295,6 +371,7 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       .selectAll(".selection")
       .attr("class", "selection fill-muted-foreground/30 stroke-border");
 
+<<<<<<< HEAD
     // Keep brush UI in sync
     context.select<SVGGElement>(".brush").call(
       brush.move,
@@ -302,6 +379,22 @@ export const LinePlot: React.FC<LinePlotProps> = ({
         ? (selectedDomainRef.current.map(x2) as [number, number])
         : null,
     );
+=======
+    brushRef.current = brush;
+    brushGroupRef.current = context.select<SVGGElement>(".brush");
+
+    // Sync initial brush selection
+    if (brushSelection) {
+      isApplyingExternalSelectionRef.current = true;
+      brushGroupRef.current?.call(
+        brush.move,
+        brushSelection.map((value) => x2(value)) as [number, number],
+      );
+      isApplyingExternalSelectionRef.current = false;
+      latestBrushSelectionRef.current = brushSelection;
+      selectedDomainRef.current = brushSelection;
+    }
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
     return () => {
       if (rafRef.current !== null) {
@@ -310,7 +403,40 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       }
     };
 
-  }, [focusData, contextData, width, height, xDomain, yDomain, styleForSeries, clipPathId, downsampleThreshold]);
+  }, [focusData, contextData, width, height, xDomain, yDomain, styleForSeries, clipPathId, downsampleThreshold, brushSelection]);
+
+  // External brush sync
+  useEffect(() => {
+    if (!brushRef.current || !brushGroupRef.current || data.length === 0 || width === 0) return;
+
+    const { x2 } = scalesRef.current;
+    const hasLatest = latestBrushSelectionRef.current !== null;
+    const hasIncoming = brushSelection !== null && brushSelection !== undefined;
+
+    if (!hasIncoming) {
+      if (!hasLatest) return;
+      isApplyingExternalSelectionRef.current = true;
+      brushGroupRef.current.call(brushRef.current.move, null);
+      isApplyingExternalSelectionRef.current = false;
+      latestBrushSelectionRef.current = null;
+      selectedDomainRef.current = null;
+      return;
+    }
+
+    const next = brushSelection as [number, number];
+    const prev = latestBrushSelectionRef.current;
+
+    if (prev && prev[0] === next[0] && prev[1] === next[1]) return;
+
+    isApplyingExternalSelectionRef.current = true;
+    brushGroupRef.current.call(
+      brushRef.current.move,
+      next.map((value) => x2(value)) as [number, number],
+    );
+    isApplyingExternalSelectionRef.current = false;
+    latestBrushSelectionRef.current = next;
+    selectedDomainRef.current = next;
+  }, [brushSelection, data.length, width]);
 
   return (
     <div
@@ -327,4 +453,8 @@ export const LinePlot: React.FC<LinePlotProps> = ({
       )}
     </div>
   );
+<<<<<<< HEAD
 };
+=======
+});
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387

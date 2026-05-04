@@ -9,13 +9,30 @@ import { ReboundCompressionPlot } from "app/components/graphs/domain/ReboundComp
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
 import { getSeriesColor } from "app/lib/graphColors";
+<<<<<<< HEAD
 import { getProfileFromRun } from "app/lib/telemetryUtils";
 import { useState } from "react";
+=======
+import {
+  getProfileFromRun,
+  RawSuspensionData,
+  resolveTrimBounds,
+  trimRawDataByBounds,
+} from "app/lib/telemetryUtils";
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
 interface ChartSectionProps {
   selected: Run[];
   jsonData: Record<number, RunJson>;
   isCompareMode: boolean;
+}
+
+function toRawSuspensionArray(value: unknown): RawSuspensionData[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value as RawSuspensionData[];
 }
 
 function getSeriesConfig(
@@ -31,9 +48,14 @@ function getSeriesConfig(
   const isError = !data || data.error;
   const rawData = isError
     ? []
-    : type === "front"
-      ? data.data.suspension.front_sus
-      : data.data.suspension.rear_sus;
+    : toRawSuspensionArray(
+        type === "front"
+          ? data.data.suspension.front_sus
+          : data.data.suspension.rear_sus,
+      );
+  const bounds = resolveTrimBounds(run, rawData.length);
+  const offset = bounds?.lowerBoundIdx ?? 0;
+  const trimmedRawData = trimRawDataByBounds(run, rawData);
   const freq = isError
     ? 100
     : type === "front"
@@ -62,12 +84,13 @@ function getSeriesConfig(
   return {
     label: customLabel ?? run.title ?? `Run ${run.id}`,
     color: getSeriesColor(index),
-    rawData,
+    rawData: trimmedRawData,
     freq,
     min,
     max,
     length,
     dynamicSag,
+    indexOffset: offset,
   };
 }
 
@@ -209,10 +232,14 @@ export function HistogramSection({
 
         return {
           label: run.title ?? `Run ${run.id}`,
-          rawData:
-            type === "front"
-              ? data.data.suspension.front_sus
-              : data.data.suspension.rear_sus,
+          rawData: trimRawDataByBounds(
+            run,
+            toRawSuspensionArray(
+              type === "front"
+                ? data.data.suspension.front_sus
+                : data.data.suspension.rear_sus,
+            ),
+          ),
           fillColor: getSeriesColor(runIndex),
           min,
           max,

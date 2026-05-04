@@ -18,6 +18,7 @@ export interface SeriesConfig {
   max?: number;
   length?: number;
   dynamicSag?: boolean;
+  indexOffset?: number;
 }
 
 export interface LineHighlight {
@@ -30,7 +31,12 @@ interface DisplacementPlotProps {
   title?: string;
   series: SeriesConfig[];
   height?: number;
+<<<<<<< HEAD
   highlight?: LineHighlight | null;
+=======
+  brushSelection?: [number, number] | null;
+  onBrushSelection?: (selection: [number, number] | null) => void;
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 }
 
 interface LineMetadata {
@@ -39,11 +45,16 @@ interface LineMetadata {
 }
 
 // DisplacementPlot renders suspension displacement
-export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
+export const DisplacementPlot: React.FC<DisplacementPlotProps> = React.memo(({
   title = "Displacement",
   series,
   height = 300,
+<<<<<<< HEAD
   highlight,
+=======
+  brushSelection,
+  onBrushSelection,
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 }) => {
   const isMobile = useIsMobile();
 
@@ -58,6 +69,7 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
         seriesItem.freq,
         seriesItem.min,
         seriesItem.max,
+        seriesItem.indexOffset,
       );
 
       lines.push(processed);
@@ -138,6 +150,8 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
           data={highlightLine ? [...chartData, highlightLine] : chartData}
           yDomain={[0, 100]}
           height={height}
+          brushSelection={brushSelection}
+          onBrushSelection={onBrushSelection}
           styleForSeries={(i) => {
             const meta = lineMetadata[i];
             const strokeWidth = isMobile ? 0.75 : 1.5;
@@ -170,4 +184,8 @@ export const DisplacementPlot: React.FC<DisplacementPlotProps> = ({
       </div>
     </section>
   );
+<<<<<<< HEAD
 };
+=======
+});
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387

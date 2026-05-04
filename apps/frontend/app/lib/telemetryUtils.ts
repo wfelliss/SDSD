@@ -30,6 +30,19 @@ export interface LinePoint {
   y: number;
 }
 
+export interface RunTrimBounds {
+  lowerBoundIdx: number;
+  upperBoundIdx: number;
+}
+
+function parseBound(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    return null;
+  }
+
+  return value;
+}
+
 export function getProfileFromRun(run: Run): Profile | null {
   const profileCandidate = (run as Run & { profile?: unknown }).profile;
   if (
@@ -44,11 +57,57 @@ export function getProfileFromRun(run: Run): Profile | null {
   return profileCandidate as Profile;
 }
 
+<<<<<<< HEAD
 export function normalizeToPercentage(
   val: number,
   min?: number,
   max?: number,
 ): number {
+=======
+export function resolveTrimBounds(run: Run, sampleLength: number): RunTrimBounds | null {
+  if (!Number.isFinite(sampleLength) || sampleLength <= 0) {
+    return null;
+  }
+
+  if (!Number.isFinite(run.length) || run.length <= 0) {
+    return { lowerBoundIdx: 0, upperBoundIdx: sampleLength - 1 };
+  }
+
+  const runWithBounds = run as Run & {
+    lower_bound_idx?: unknown;
+    upper_bound_idx?: unknown;
+  };
+
+  const lastIndex = sampleLength - 1;
+  const scale = sampleLength / run.length;
+  const rawLower = runWithBounds.lower_bound_idx;
+  const rawUpper = runWithBounds.upper_bound_idx;
+
+  const parsedLower = parseBound(rawLower) ?? 0;
+  const parsedUpper = parseBound(rawUpper) ?? (run.length - 1);
+
+  const lowerBoundIdx = Math.min(Math.max(Math.round(parsedLower * scale), 0), lastIndex);
+  const clampedUpper = Math.min(Math.max(Math.round(parsedUpper * scale), 0), lastIndex);
+  const upperBoundIdx = Math.max(clampedUpper, lowerBoundIdx);
+
+  return { lowerBoundIdx, upperBoundIdx };
+}
+
+export function trimRawDataByBounds<T>(run: Run, dataArr: T[]): T[] {
+  if (!Array.isArray(dataArr) || dataArr.length === 0) {
+    return [];
+  }
+
+  const bounds = resolveTrimBounds(run, dataArr.length);
+  if (!bounds) {
+    return [];
+  }
+
+  return dataArr.slice(bounds.lowerBoundIdx, bounds.upperBoundIdx + 1);
+}
+
+export function normalizeToPercentage(val: number, min?: number, max?: number): number {
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
   // If caller provides a valid min/max range, use it; otherwise fall back to 0..MAX_TRAVEL
   const hasValidRange =
     typeof min === "number" &&
@@ -70,12 +129,20 @@ export function normalizeToPercentage(
 export function standardizeData(
   dataArr: RawSuspensionData[],
   freq: number,
+<<<<<<< HEAD
+=======
+  indexOffset: number = 0,
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 ): StandardizedPoint[] {
   if (!Array.isArray(dataArr)) return [];
 
   return dataArr.map((p, i) => {
     let val = 0;
+<<<<<<< HEAD
     let time = i / freq;
+=======
+    let time = (i + indexOffset) / freq;
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
     if (typeof p === "number") {
       val = p;
@@ -96,8 +163,14 @@ export function processLinePlotData(
   freq: number,
   min?: number,
   max?: number,
+<<<<<<< HEAD
 ): NormalizedPoint[] {
   const cleanData = standardizeData(dataArr, freq);
+=======
+  indexOffset: number = 0,
+): NormalizedPoint[] {
+  const cleanData = standardizeData(dataArr, freq, indexOffset);
+>>>>>>> 424d7dc57db4bca2669a873290a65921c9fec387
 
   return cleanData.map((point) => ({
     x: point.time,
