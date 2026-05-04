@@ -280,13 +280,11 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
 
   const compressionTrendLines = useMemo(
     () => buildTrendLines("compression"),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [prepared, maxSpeed, speedRegion.high],
   );
 
   const reboundTrendLines = useMemo(
     () => buildTrendLines("rebound"),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [prepared, maxSpeed, speedRegion.high],
   );
 
