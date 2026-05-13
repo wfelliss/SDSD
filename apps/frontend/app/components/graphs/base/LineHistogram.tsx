@@ -84,7 +84,7 @@ export const LineHistogram: React.FC<LineHistogramProps> = ({
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
     // Bin each series
-    const finalDomain: [number, number] = xDomain ?? [0, 100]; // our x domain is -4000 to 4000 
+    const finalDomain: [number, number] = xDomain ?? [0, 100];
     const binGenerator = d3
       .bin<number, number>()
       .domain(finalDomain)
