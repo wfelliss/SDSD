@@ -1,31 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3';
 import { getSeriesColor } from '../../../lib/graphColors';
 
-export interface HistogramBin {
-  x0: number;
-  x1: number;
-  percent: number;
+export interface LineHistogramBin {
+    x0: number;
+    x1: number; 
+    percent: number;
 }
 
-export interface HistogramSeries {
+export interface LineHistogramSeries {
   label: string;
   data: number[];
   color?: string;
 }
 
-export interface HistogramProps {
+export interface LineHistogramProps {
   data?: number[];
-  series?: HistogramSeries[];
+  series?: LineHistogramSeries[];
   height?: number;
   xDomain?: [number, number];
   className?: string;
   fillColor?: string;
   title?: string;
-  binCount?: number;
+  binCount?: number; 
 }
 
-export const Histogram: React.FC<HistogramProps> = ({ 
+export const LineHistogram: React.FC<LineHistogramProps> = ({
   data = [],
   series,
   height = 500, 
@@ -52,8 +52,8 @@ export const Histogram: React.FC<HistogramProps> = ({
   }, []);
 
   // Main D3 rendering
-  const finalSeries: HistogramSeries[] = useMemo(() =>
-      // If series prop provided map each series item
+  const finalSeries: LineHistogramSeries[] = useMemo(() =>
+    // If series prop provided map each series item
       series && series.length > 0
         ? series
             .filter((s) => Array.isArray(s.data))
@@ -83,24 +83,28 @@ export const Histogram: React.FC<HistogramProps> = ({
     const innerHeight = height - margin.top - margin.bottom;
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
-    // Bin source data into histogram buckets
-    const finalDomain: [number, number] = xDomain ?? [0, 100];
+    // Bin each series
+    const finalDomain: [number, number] = xDomain ?? [0, 100]; // our x domain is -4000 to 4000 
     const binGenerator = d3
       .bin<number, number>()
       .domain(finalDomain)
       .thresholds(binCount);
     const binsBySeries = finalSeries.map((s) => binGenerator(s.data));
 
-    const firstSeriesBins = binsBySeries[0];
-    if (!firstSeriesBins) return;
-    const firstBin = firstSeriesBins[0];
-    const lastBin = firstSeriesBins[firstSeriesBins.length - 1];
-    if (!firstBin || !lastBin || firstBin.x0 == null || lastBin.x1 == null) return;
+    // Build line points for each series
+    const linePointsBySeries = binsBySeries.map((seriesBins, seriesIndex) => {
+      const totalPoints = finalSeries[seriesIndex]?.data.length ?? 0;
+      return seriesBins.map((bin) => ({
+        x: ((bin.x0 ?? 0) + (bin.x1 ?? 0)) / 2,
+        y: totalPoints > 0 ? (bin.length / totalPoints) * 100 : 0, 
+      }));
+    }
+    );
 
     // Scales
     const x = d3
       .scaleLinear()
-      .domain([firstBin.x0, lastBin.x1])
+      .domain(finalDomain)
       .range([0, innerWidth]);
 
     const maxPercent =
@@ -136,113 +140,21 @@ export const Histogram: React.FC<HistogramProps> = ({
     const tooltip = d3.select(tooltipRef.current);
     tooltip.style("opacity", 0);
 
-    type RenderBar = {
+    type RenderSeries = {                                                                                                                                                                    
       seriesIndex: number;
-      binIndex: number;
-      x0: number;
-      x1: number;
-      count: number;
-      percent: number;
-      total: number;
-      color: string;
+      color: string;                                                                                                                                                                         
       label: string;
+      points: { x: number; y: number }[];
     };
 
-    // Prepare data for rendering
-    const seriesCount = Math.max(1, finalSeries.length);
-    const bars: RenderBar[] = binsBySeries.flatMap((seriesBins, seriesIndex) => {
-      const seriesConfig = finalSeries[seriesIndex];
-      const totalPoints = seriesConfig?.data.length ?? 0;
-      const color = seriesConfig?.color ?? fillColor;
-      const label = seriesConfig?.label || `Series ${seriesIndex + 1}`;
+    const renderSeries: RenderSeries[] = linePointsBySeries.map((points, seriesIndex) => ({                                                                                                  
+      seriesIndex,                                                                                                                                                                           
+      color: finalSeries[seriesIndex]?.color ?? fillColor,
+      label: finalSeries[seriesIndex]?.label ?? `Series ${seriesIndex + 1}`,                                                                                                                 
+      points,                                                                                                                                                                                
+    }));
 
-      return seriesBins.map((bin, binIndex) => {
-        const x0 = bin.x0 ?? 0;
-        const x1 = bin.x1 ?? x0;
-        const percent = totalPoints > 0 ? (bin.length / totalPoints) * 100 : 0;
-
-        return {
-          seriesIndex,
-          binIndex,
-          x0,
-          x1,
-          count: bin.length,
-          percent,
-          total: totalPoints,
-          color,
-          label,
-        };
-      });
-    }).sort((a, b) => {
-      // Group by bin, then sort smaller percentages last (rendered on top)
-      if (a.binIndex !== b.binIndex) return a.binIndex - b.binIndex;
-      return b.percent - a.percent;
-    });
-
-    const barsByBin = d3.group(bars, (bar) => bar.binIndex);
-    const minPercentByBin = d3.rollup(
-      bars,
-      (v) => d3.min(v, (b) => b.percent) ?? 0,
-      (bar) => bar.binIndex
-    );
-
-    // Draw overlaid bars (all in same bin) + interactive tooltip
-    g.selectAll<SVGRectElement, RenderBar>("rect")
-      .data(bars, (bar) => `${bar.seriesIndex}-${bar.binIndex}`)
-      .join("rect")
-      .attr("x", (bar) => x(bar.x0) + 1)
-      .attr("width", (bar) => Math.max(0, x(bar.x1) - x(bar.x0) - 1))
-      .attr("y", (bar) => y(bar.percent))
-      .attr("height", (bar) => y(0) - y(bar.percent))
-      .attr("rx", 2)
-      .attr("ry", 2)
-      .attr("fill", (bar) => bar.color)
-      .attr("stroke", "hsl(var(--card))")
-      .attr("stroke-width", 0.5)
-      .attr("opacity", (bar) => {
-        // If hovering over legend, dim non-hovered series
-        if (hoveredSeriesIndex !== null && bar.seriesIndex !== hoveredSeriesIndex) {
-          return 0.1;
-        }
-
-        // Apply opacity to the smallest bar in each bin on multi series charts
-        const binBars = barsByBin.get(bar.binIndex) ?? [];
-        if (binBars.length <= 1) return 1;
-        const minPercent = minPercentByBin.get(bar.binIndex) ?? 0;
-        return bar.percent === minPercent ? 0.5 : 1;
-      })
-      .attr("class", "cursor-pointer")
-      .on("mouseenter", function (event: MouseEvent, bar) {
-        d3.select(this).style("filter", "brightness(1.1)");
-
-        const barsInBin = barsByBin.get(bar.binIndex) ?? [];
-        const range = `${bar.x0.toFixed(1)} - ${bar.x1.toFixed(1)}`;
-        const tooltipLines = barsInBin
-          .map((b) => `<div class="text-xs text-gray-600">${b.label}: ${b.percent.toFixed(1)}%</div>`)
-          .join("");
-        
-        tooltip.style("opacity", 1);
-        tooltip.selectAll("*").remove();
-        tooltip.append("div").attr("class", "text-xs text-gray-500").text(`Range: ${range}`);
-        barsInBin.forEach((b) => {
-          tooltip.append("div")
-            .attr("class", "text-xs text-gray-600")
-            .text(`${b.label}: ${b.percent.toFixed(1)}%`);
-        });
-
-        const [xPos, yPos] = d3.pointer(event, containerRef.current);
-        tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
-      })
-      .on("mousemove", (event: MouseEvent) => {
-        const [xPos, yPos] = d3.pointer(event, containerRef.current);
-        tooltip.style("left", `${xPos}px`).style("top", `${yPos - 10}px`);
-      })
-      .on("mouseleave", function () {
-        d3.select(this).style("filter", null);
-        tooltip.style("opacity", 0);
-      });
-
-    // Draw axes
+    // Draw axis
     g.selectAll<SVGGElement, null>("g.x-axis")
       .data([null])
       .join("g")
@@ -254,15 +166,43 @@ export const Histogram: React.FC<HistogramProps> = ({
 
     const yTickFormat = d3.format(".0f");
     g.selectAll<SVGGElement, null>("g.y-axis")
-      .data([null])
-      .join("g")
+      .data([null])                                                                                                                                                                          
+      .join("g")    
       .attr("class", "y-axis")
       .call(d3.axisLeft(y).ticks(5).tickFormat((value) => `${yTickFormat(Number(value))}%`))
       .call((axisGroup) => axisGroup.selectAll(".domain, .tick line").attr("class", "stroke-border"))
       .call((axisGroup) => axisGroup.selectAll(".tick text").attr("class", "text-muted-foreground text-xs"));
 
-  }, [finalSeries, width, height, fillColor, xDomain, binCount, hoveredSeriesIndex]); 
+    g.selectAll("line.zero-line")
+      .data([null])
+      .join("line")
+      .attr("class", "zero-line")                                                                                                                                                            
+      .attr("x1", x(0)).attr("x2", x(0))
+      .attr("y1", 0).attr("y2", innerHeight)                                                                                                                                                 
+      .attr("stroke", "hsl(var(--border))")                                                                                                                                                  
+      .attr("stroke-dasharray", "4,4");
 
+    // Draw lines
+    const lineGenerator = d3.line<{ x: number; y: number }>()                                                                                                                                
+      .x((point) => x(point.x))                                                                                                                                
+      .y((point) => y(point.y))                                                                                                                                   
+      .curve(d3.curveMonotoneX);
+
+    g.selectAll<SVGPathElement, RenderSeries>("path.series-line") 
+      .data(renderSeries, (s) => s.seriesIndex)                                                                                                                                                
+      .join("path") 
+      .attr("d", (s) => lineGenerator(s.points))
+      .attr("fill", "none")
+      .attr("stroke", (s) => s.color)
+      .attr("stroke-width", 2)
+      .attr("opacity", (d) => (hoveredSeriesIndex === null || hoveredSeriesIndex === d.seriesIndex ? 1 : 0.3));
+
+    // Tooltip setup
+    // (no tooltip as of yet)
+    
+  } , [finalSeries, width, height, xDomain, binCount, hoveredSeriesIndex]);
+
+  // JSX return
   return (
     <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative w-full ${className}`} ref={containerRef}>
       <div className="flex items-center justify-between mb-4">
