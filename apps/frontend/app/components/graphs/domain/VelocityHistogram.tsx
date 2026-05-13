@@ -36,7 +36,7 @@ export const VelocityHistogram: React.FC<VelocityHistogramProps> = ({
   max,
 }) => {
     // buildVelocitySamples on rawData to get velocity samples
-    const histogramSeries = useMemo<HistogramSeries[]>(() => {
+    const histogramSeries = useMemo<LineHistogramSeries[]>(() => {
         if (series && series.length > 0) {
             return series.map((seriesItem, index) => ({
                 label: seriesItem.label,
