@@ -1,5 +1,4 @@
 import React, { useMemo } from "react";
-import { SeriesConfig } from "./DisplacementPlot"; 
 import { 
     LineHistogram, 
     LineHistogramSeries } from "../base/LineHistogram";
@@ -10,6 +9,7 @@ import { getSeriesColor } from "app/lib/graphColors";
 
 interface VelocityHistogramProps {
   rawData?: RawSuspensionData[];
+  freq?: number;
   series?: {
     label: string;
     rawData: RawSuspensionData[];
@@ -28,6 +28,7 @@ interface VelocityHistogramProps {
 // Renders a histogram of velocity values
 export const VelocityHistogram: React.FC<VelocityHistogramProps> = ({
   rawData = [],
+  freq = 100,
   series,
   title = "Suspension Velocity",
   fillColor = "hsl(var(--chart-1))",
@@ -49,10 +50,10 @@ export const VelocityHistogram: React.FC<VelocityHistogramProps> = ({
             {
                 label: title,
                 color: fillColor,
-                data: buildVelocitySamples(rawData, 100, min, max).map(s => s.velocity),
+                data: buildVelocitySamples(rawData, freq, min, max).map(s => s.velocity),
             },
         ];
-    }, [series, rawData, min, max, fillColor, title]);
+    }, [series, rawData, freq, min, max, fillColor, title]);
 
     // Keep layout stable
     if (!histogramSeries.some((seriesItem) => seriesItem.data.length > 0)) {

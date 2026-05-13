@@ -200,7 +200,7 @@ export const LineHistogram: React.FC<LineHistogramProps> = ({
     // Tooltip setup
     // (no tooltip as of yet)
     
-  } , [finalSeries, width, height, xDomain, binCount, hoveredSeriesIndex]);
+  } , [finalSeries, width, height, xDomain, binCount]); // add hoveredSeriesIndex back for tooltip
 
   // JSX return
   return (

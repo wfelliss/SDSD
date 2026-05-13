@@ -120,7 +120,7 @@ export function DisplacementSection({
             highlight={highlight}
           />
           <DisplacementPlot
-            title="Rear Shock Travel"
+            title="Rear Suspension Travel"
             series={selected.map((run, i) =>
               getSeriesConfig(run, i, jsonData, "rear", undefined, true),
             )}
