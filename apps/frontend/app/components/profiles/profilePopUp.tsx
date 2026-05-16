@@ -36,7 +36,7 @@ export const ProfilePopup = ({ isOpen, onClose, selected, onProfileUpdate }: Pro
         
         <div className="mt-4 text-right">
           <button
-            className="cursor-pointer inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
             onClick={onClose}
           >
             Close

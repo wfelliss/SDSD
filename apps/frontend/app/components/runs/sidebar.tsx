@@ -28,7 +28,7 @@ function SidebarMenuButton({
 
   return (
     <button
-      className="w-full rounded-md group hover:bg-slate-100 flex justify-between items-center p-2 cursor-pointer"
+      className="w-full rounded-md group hover:bg-slate-100 flex justify-between items-center p-2"
       onClick={toggle}
     >
       <div className="flex items-center gap-2 w-full">
@@ -247,7 +247,7 @@ export function Sidebar({ runs, selectedRunIds, setSelectedRunIds }: SidebarProp
               <div className="absolute bottom-4 right-4">
                 <button
                   onClick={() => setCollapsed(true)}
-                  className="cursor-pointer p-2 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"
+                  className="p-2 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"
                 >
                   <ArrowLeft className="size-4" />
                 </button>
@@ -266,7 +266,7 @@ export function Sidebar({ runs, selectedRunIds, setSelectedRunIds }: SidebarProp
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={() => setCollapsed(false)}
-            className="cursor-pointer fixed top-4 left-4 p-3 bg-slate-800 text-white rounded-full hover:bg-slate-700 z-50 shadow-lg"
+            className="fixed top-4 left-4 p-3 bg-slate-800 text-white rounded-full hover:bg-slate-700 z-50 shadow-lg"
           >
             <ArrowRight className="size-4" />
           </motion.button>

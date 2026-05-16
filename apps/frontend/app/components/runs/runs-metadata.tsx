@@ -33,7 +33,7 @@ export function RunsMetadata({ runs, jsonData, onOpenComments }: RunsMetadataPro
                 <span className="text-xs text-slate-500">{formatDate(run.date)}</span>
                 <button
                   title="Comments"
-                  className="cursor-pointer p-1 rounded hover:bg-slate-100"
+                  className="p-1 rounded hover:bg-slate-100"
                   onClick={() => onOpenComments(run)}
                 >
                   <MessageSquareText className="size-4 text-slate-600" />
