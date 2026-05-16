@@ -147,7 +147,7 @@ export function MainContent({
               <div className="flex items-center gap-2">
                 {!isCompareMode && (
                   <button
-                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+                    className="cursor-pointer flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
                     onClick={() => setTrimOpen(true)}
                     title="Trim run bounds"
                   >
@@ -155,7 +155,7 @@ export function MainContent({
                   </button>
                 )}
                 <button 
-                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
+                  className="cursor-pointer flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md" 
                   onClick={() => setIsPopupOpen(true)}
                 >
                   <UserIcon className="size-5" />
