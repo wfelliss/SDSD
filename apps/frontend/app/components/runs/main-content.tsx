@@ -169,7 +169,14 @@ export function MainContent({
               jsonData={jsonData}
               onOpenComments={(r) => { setCommentsRun(r); setCommentsOpen(true); }}
             />
+            <SectionDivider />
 
+            <SummarySection
+              selected={runs}
+              jsonData={jsonData}
+              isCompareMode={isCompareMode}
+            />
+            <SectionDivider />
             <DisplacementSection
               selected={runs}
               jsonData={jsonData}
@@ -184,15 +191,6 @@ export function MainContent({
               jsonData={jsonData}
               isCompareMode={isCompareMode}
             />
-
-            <SectionDivider />
-
-            <SummarySection
-              selected={runs}
-              jsonData={jsonData}
-              isCompareMode={isCompareMode}
-            />
-
           </>
         )}
       </div>

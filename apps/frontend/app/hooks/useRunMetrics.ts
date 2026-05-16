@@ -87,37 +87,41 @@ function calculateRebound(_run: Run, _jsonData: Record<number, RunJson>, _type: 
   return 0;
 }
 
-export function useRunMetrics(run: Run, jsonData: Record<number, RunJson>) {
-  return useMemo(() => {
-    const frontNorm = getNormalizedSuspensionData(run, jsonData, 'front');
-    const rearNorm  = getNormalizedSuspensionData(run, jsonData, 'rear');
-    const frontFreq = run.front_freq ?? null;
-    const rearFreq  = run.rear_freq  ?? null;
+export function computeRunMetrics(run: Run, jsonData: Record<number, RunJson>) {
+  const frontNorm = getNormalizedSuspensionData(run, jsonData, 'front');
+  const rearNorm  = getNormalizedSuspensionData(run, jsonData, 'rear');
+  const frontFreq = run.front_freq ?? null;
+  const rearFreq  = run.rear_freq  ?? null;
 
-    const frontSag = dynamicSag(frontNorm);
-    const rearSag  = dynamicSag(rearNorm);
+  const frontSag = dynamicSag(frontNorm);
+  const rearSag  = dynamicSag(rearNorm);
 
-    return {
-      frontSag,
-      rearSag,
-      frontSagInRange: frontSag === null ? null : frontSag >= DYNAMIC_SAG_IDEAL_MIN_FRONT && frontSag <= DYNAMIC_SAG_IDEAL_MAX_FRONT,
-      rearSagInRange:  rearSag  === null ? null : rearSag  >= DYNAMIC_SAG_IDEAL_MIN_REAR  && rearSag  <= DYNAMIC_SAG_IDEAL_MAX_REAR,
-      frontBottomOutPct:   zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontBottomOutSec:   zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontBottomOutCount: countZoneEntries(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
-      frontMaxTravel:      maxTravel(frontNorm),
-      frontOffGroundPct: zonePercent(frontNorm, 0, OFF_GROUND_TRAVEL_MAX),
-      frontOffGroundSec: zoneSeconds(frontNorm, frontFreq, 0, OFF_GROUND_TRAVEL_MAX),
-      rearBottomOutPct:   zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearBottomOutSec:   zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearBottomOutCount: countZoneEntries(rearNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
-      rearMaxTravel:       maxTravel(rearNorm),
-      rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
-      rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
-      frontCompression:  calculateCompression(run, jsonData, 'front'),
-      rearCompression:   calculateCompression(run, jsonData, 'rear'),
-      frontRebound:      calculateRebound(run, jsonData, 'front'),
-      rearRebound:       calculateRebound(run, jsonData, 'rear'),
-    };
-  }, [run, jsonData]);
+  return {
+    frontSag,
+    rearSag,
+    frontSagInRange: frontSag === null ? null : frontSag >= DYNAMIC_SAG_IDEAL_MIN_FRONT && frontSag <= DYNAMIC_SAG_IDEAL_MAX_FRONT,
+    rearSagInRange:  rearSag  === null ? null : rearSag  >= DYNAMIC_SAG_IDEAL_MIN_REAR  && rearSag  <= DYNAMIC_SAG_IDEAL_MAX_REAR,
+    frontBottomOutPct:   zonePercent(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+    frontBottomOutSec:   zoneSeconds(frontNorm, frontFreq, BOTTOM_OUT_TRAVEL_MIN, 100),
+    frontBottomOutCount: countZoneEntries(frontNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+    frontMaxTravel:      maxTravel(frontNorm),
+    frontOffGroundPct: zonePercent(frontNorm, 0, OFF_GROUND_TRAVEL_MAX),
+    frontOffGroundSec: zoneSeconds(frontNorm, frontFreq, 0, OFF_GROUND_TRAVEL_MAX),
+    rearBottomOutPct:   zonePercent(rearNorm,  BOTTOM_OUT_TRAVEL_MIN, 100),
+    rearBottomOutSec:   zoneSeconds(rearNorm,  rearFreq,  BOTTOM_OUT_TRAVEL_MIN, 100),
+    rearBottomOutCount: countZoneEntries(rearNorm, BOTTOM_OUT_TRAVEL_MIN, 100),
+    rearMaxTravel:       maxTravel(rearNorm),
+    rearOffGroundPct:  zonePercent(rearNorm,  0, OFF_GROUND_TRAVEL_MAX),
+    rearOffGroundSec:  zoneSeconds(rearNorm,  rearFreq,  0, OFF_GROUND_TRAVEL_MAX),
+    frontCompression:  calculateCompression(run, jsonData, 'front'),
+    rearCompression:   calculateCompression(run, jsonData, 'rear'),
+    frontRebound:      calculateRebound(run, jsonData, 'front'),
+    rearRebound:       calculateRebound(run, jsonData, 'rear'),
+  };
+}
+
+export type RunMetrics = ReturnType<typeof computeRunMetrics>;
+
+export function useRunMetrics(run: Run, jsonData: Record<number, RunJson>): RunMetrics {
+  return useMemo(() => computeRunMetrics(run, jsonData), [run, jsonData]);
 }
