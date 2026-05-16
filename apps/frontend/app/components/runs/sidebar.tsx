@@ -28,7 +28,7 @@ function SidebarMenuButton({
 
   return (
     <button
-      className="w-full rounded-md group hover:bg-slate-100 flex justify-between items-center p-2 cursor-pointer"
+      className="w-full rounded-md group hover:bg-slate-100 flex justify-between items-center p-2"
       onClick={toggle}
     >
       <div className="flex items-center gap-2 w-full">
