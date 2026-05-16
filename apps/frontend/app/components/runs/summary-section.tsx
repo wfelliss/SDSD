@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { Run } from "@repo/database";
 import { RunJson } from "app/types/runs";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { cn } from "app/lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { useRunMetrics, DYNAMIC_SAG_IDEAL_MIN_FRONT, DYNAMIC_SAG_IDEAL_MAX_FRONT, DYNAMIC_SAG_IDEAL_MIN_REAR, DYNAMIC_SAG_IDEAL_MAX_REAR, BOTTOM_OUT_COUNT_THRESHOLD, BOTTOM_OUT_TRAVEL_MIN } from "app/hooks/useRunMetrics";
+import { computeRunMetrics, type RunMetrics, DYNAMIC_SAG_IDEAL_MIN_FRONT, DYNAMIC_SAG_IDEAL_MAX_FRONT, DYNAMIC_SAG_IDEAL_MIN_REAR, DYNAMIC_SAG_IDEAL_MAX_REAR, BOTTOM_OUT_COUNT_THRESHOLD, BOTTOM_OUT_TRAVEL_MIN } from "app/hooks/useRunMetrics";
 
 interface SummarySectionProps {
   selected: Run[];
@@ -127,11 +128,10 @@ function TravelZoneCell({ value, seconds }: TravelZoneCellProps) {
 
 interface RunSummaryRowProps {
   run: Run;
-  jsonData: Record<number, RunJson>;
+  metrics: RunMetrics;
 }
 
-function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
-  const metrics = useRunMetrics(run, jsonData);
+function RunSummaryRow({ run, metrics }: RunSummaryRowProps) {
 
   return (
     <tr className="border-t border-border">
@@ -164,10 +164,10 @@ function RunSummaryRow({ run, jsonData }: RunSummaryRowProps) {
 
 interface SummaryTableProps {
   selected: Run[];
-  jsonData: Record<number, RunJson>;
+  metricsMap: Map<number, RunMetrics>;
 }
 
-function SummaryTable({ selected, jsonData }: SummaryTableProps) {
+function SummaryTable({ selected, metricsMap }: SummaryTableProps) {
   if (!selected || selected.length === 0) {
     return (
       <div className="text-sm text-muted-foreground">No runs selected.</div>
@@ -227,7 +227,7 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
         </thead>
         <tbody>
           {selected.map((run) => (
-            <RunSummaryRow key={run.id} run={run} jsonData={jsonData} />
+            <RunSummaryRow key={run.id} run={run} metrics={metricsMap.get(run.id)!} />
           ))}
         </tbody>
       </table>
@@ -237,12 +237,11 @@ function SummaryTable({ selected, jsonData }: SummaryTableProps) {
 
 interface MobileRunSummaryRowProps {
   run: Run;
-  jsonData: Record<number, RunJson>;
+  metrics: RunMetrics;
   type: 'fork' | 'shock';
 }
 
-function MobileRunSummaryRow({ run, jsonData, type }: MobileRunSummaryRowProps) {
-  const metrics = useRunMetrics(run, jsonData);
+function MobileRunSummaryRow({ run, metrics, type }: MobileRunSummaryRowProps) {
 
   const isFork = type === 'fork';
 
@@ -273,10 +272,10 @@ function MobileRunSummaryRow({ run, jsonData, type }: MobileRunSummaryRowProps) 
 
 interface MobileSummaryTableProps {
   selected: Run[];
-  jsonData: Record<number, RunJson>;
+  metricsMap: Map<number, RunMetrics>;
 }
 
-function MobileSummaryTable({ selected, jsonData }: MobileSummaryTableProps) {
+function MobileSummaryTable({ selected, metricsMap }: MobileSummaryTableProps) {
   if (!selected || selected.length === 0) {
     return <div className="text-sm text-muted-foreground">No runs selected.</div>;
   }
@@ -296,7 +295,7 @@ function MobileSummaryTable({ selected, jsonData }: MobileSummaryTableProps) {
         </thead>
         <tbody>
           {selected.map((run) => (
-            <MobileRunSummaryRow key={run.id} run={run} jsonData={jsonData} type={type} />
+            <MobileRunSummaryRow key={run.id} run={run} metrics={metricsMap.get(run.id)!} type={type} />
           ))}
         </tbody>
       </table>
@@ -319,15 +318,15 @@ function MobileSummaryTable({ selected, jsonData }: MobileSummaryTableProps) {
 
 interface RunRecommendationsBlockProps {
   run: Run;
-  jsonData: Record<number, RunJson>;
+  metrics: RunMetrics;
 }
 
 function ComponentRecommendationList({ items }: { items: string[] }) {
   const display = items.length > 0 ? items : ['No issues detected.'];
   return (
     <ul className="space-y-0.5">
-      {display.map((item, i) => (
-        <li key={i} className="text-sm text-text-secondary flex gap-2">
+      {display.map((item) => (
+        <li key={item} className="text-sm text-muted-foreground flex gap-2">
           <span className="text-muted-foreground select-none">•</span>
           {item}
         </li>
@@ -336,8 +335,7 @@ function ComponentRecommendationList({ items }: { items: string[] }) {
   );
 }
 
-function RunRecommendationsBlock({ run, jsonData }: RunRecommendationsBlockProps) {
-  const metrics = useRunMetrics(run, jsonData);
+function RunRecommendationsBlock({ run, metrics }: RunRecommendationsBlockProps) {
   const title = run.title || `Run ${run.id}`;
 
   const forkItems = getComponentRecommendations(
@@ -368,10 +366,10 @@ function RunRecommendationsBlock({ run, jsonData }: RunRecommendationsBlockProps
 
 interface RecommendationsSummaryProps {
   selected: Run[];
-  jsonData: Record<number, RunJson>;
+  metricsMap: Map<number, RunMetrics>;
 }
 
-function RecommendationsSummary({ selected, jsonData }: RecommendationsSummaryProps) {
+function RecommendationsSummary({ selected, metricsMap }: RecommendationsSummaryProps) {
   if (selected.length === 0) return null;
 
   return (
@@ -379,7 +377,7 @@ function RecommendationsSummary({ selected, jsonData }: RecommendationsSummaryPr
       <p className="text-sm font-semibold text-foreground mb-2">Recommendations</p>
       <div className="flex flex-col gap-2">
         {selected.map((run) => (
-          <RunRecommendationsBlock key={run.id} run={run} jsonData={jsonData} />
+          <RunRecommendationsBlock key={run.id} run={run} metrics={metricsMap.get(run.id)!} />
         ))}
       </div>
     </div>
@@ -391,18 +389,23 @@ export function SummarySection({
   jsonData,
   isCompareMode,
 }: SummarySectionProps) {
+  const metricsMap = useMemo(
+    () => new Map(selected.map((run) => [run.id, computeRunMetrics(run, jsonData)])),
+    [selected, jsonData],
+  );
+
   return (
     <section className="w-full">
       <SectionHeader>{isCompareMode ? "Comparison Summary" : "Summary"}</SectionHeader>
       {/* Mobile: tabbed Fork / Shock view */}
       <div className="md:hidden">
-        <MobileSummaryTable selected={selected} jsonData={jsonData} />
+        <MobileSummaryTable selected={selected} metricsMap={metricsMap} />
       </div>
       {/* Desktop: full table */}
       <div className="hidden md:block">
-        <SummaryTable selected={selected} jsonData={jsonData} />
+        <SummaryTable selected={selected} metricsMap={metricsMap} />
       </div>
-      <RecommendationsSummary selected={selected} jsonData={jsonData} />
+      <RecommendationsSummary selected={selected} metricsMap={metricsMap} />
     </section>
   );
 }
