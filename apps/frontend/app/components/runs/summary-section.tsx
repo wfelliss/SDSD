@@ -11,6 +11,33 @@ interface SummarySectionProps {
   isCompareMode: boolean;
 }
 
+function getComponentRecommendations(
+  sag: number | null,
+  sagMin: number,
+  sagMax: number,
+  sagInRange: boolean | null,
+  bottomOutCount: number | null,
+  maxTravel: number | null,
+): string[] {
+  const items: string[] = [];
+
+  if (sag !== null) {
+    if (sag < sagMin) items.push(`Reduce pressure (sag too low: ${sag.toFixed(1)}%)`);
+    else if (sag > sagMax) items.push(`Increase pressure (sag too high: ${sag.toFixed(1)}%)`);
+  }
+
+  if (bottomOutCount !== null) {
+    const sagWarning = sagInRange === false ? 'Sag not in range — suggestions may be inaccurate. ' : '';
+    if (bottomOutCount > BOTTOM_OUT_COUNT_THRESHOLD) {
+      items.push(`${sagWarning}Add a volume spacer (${bottomOutCount} bottom-outs)`);
+    } else if (bottomOutCount === 0 && maxTravel !== null && maxTravel < BOTTOM_OUT_TRAVEL_MIN) {
+      items.push(`${sagWarning}Remove volume spacer (never reached travel)`);
+    }
+  }
+
+  return items;
+}
+
 interface SagCellProps {
   value: number | null;
   type: 'front' | 'rear';
@@ -290,6 +317,75 @@ function MobileSummaryTable({ selected, jsonData }: MobileSummaryTableProps) {
   );
 }
 
+interface RunRecommendationsBlockProps {
+  run: Run;
+  jsonData: Record<number, RunJson>;
+}
+
+function ComponentRecommendationList({ items }: { items: string[] }) {
+  const display = items.length > 0 ? items : ['No issues detected.'];
+  return (
+    <ul className="space-y-0.5">
+      {display.map((item, i) => (
+        <li key={i} className="text-sm text-text-secondary flex gap-2">
+          <span className="text-muted-foreground select-none">•</span>
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function RunRecommendationsBlock({ run, jsonData }: RunRecommendationsBlockProps) {
+  const metrics = useRunMetrics(run, jsonData);
+  const title = run.title || `Run ${run.id}`;
+
+  const forkItems = getComponentRecommendations(
+    metrics.frontSag, DYNAMIC_SAG_IDEAL_MIN_FRONT, DYNAMIC_SAG_IDEAL_MAX_FRONT,
+    metrics.frontSagInRange, metrics.frontBottomOutCount, metrics.frontMaxTravel,
+  );
+  const shockItems = getComponentRecommendations(
+    metrics.rearSag, DYNAMIC_SAG_IDEAL_MIN_REAR, DYNAMIC_SAG_IDEAL_MAX_REAR,
+    metrics.rearSagInRange, metrics.rearBottomOutCount, metrics.rearMaxTravel,
+  );
+
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <p className="text-sm font-semibold text-foreground mb-3">{title}</p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Fork</p>
+          <ComponentRecommendationList items={forkItems} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Shock</p>
+          <ComponentRecommendationList items={shockItems} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface RecommendationsSummaryProps {
+  selected: Run[];
+  jsonData: Record<number, RunJson>;
+}
+
+function RecommendationsSummary({ selected, jsonData }: RecommendationsSummaryProps) {
+  if (selected.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <p className="text-sm font-semibold text-foreground mb-2">Recommendations</p>
+      <div className="flex flex-col gap-2">
+        {selected.map((run) => (
+          <RunRecommendationsBlock key={run.id} run={run} jsonData={jsonData} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SummarySection({
   selected,
   jsonData,
@@ -306,6 +402,7 @@ export function SummarySection({
       <div className="hidden md:block">
         <SummaryTable selected={selected} jsonData={jsonData} />
       </div>
+      <RecommendationsSummary selected={selected} jsonData={jsonData} />
     </section>
   );
 }
