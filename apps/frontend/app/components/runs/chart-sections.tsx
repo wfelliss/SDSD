@@ -5,6 +5,7 @@ import {
   LineHighlight,
 } from "app/components/graphs/domain/DisplacementPlot";
 import { TravelHistogram } from "app/components/graphs/domain/TravelHistogram";
+import { VelocityHistogram } from "app/components/graphs/domain/VelocityHistogram";
 import { ReboundCompressionPlot } from "app/components/graphs/domain/ReboundCompressionPlot";
 import { SectionHeader } from "app/components/ui/run-elements";
 import { Run } from "@repo/database";
@@ -90,7 +91,7 @@ function getSeriesConfig(
   };
 }
 
-// ---------------------- Displacement Plot ----------------------
+// ---------------------- Line Plots ----------------------
 export function DisplacementSection({
   selected,
   jsonData,
@@ -107,19 +108,19 @@ export function DisplacementSection({
 
   return (
     <section>
-      <SectionHeader>Displacement & Velocity</SectionHeader>
+      <SectionHeader>Line Plots</SectionHeader>
 
       {isCompareMode ? (
         <div className="grid grid-cols-1 gap-6 w-full">
           <DisplacementPlot
-            title="Front Fork Comparison"
+            title="Front Suspension Travel"
             series={selected.map((run, i) =>
               getSeriesConfig(run, i, jsonData, "front", undefined, true),
             )}
             highlight={highlight}
           />
           <DisplacementPlot
-            title="Rear Shock Comparison"
+            title="Rear Suspension Travel"
             series={selected.map((run, i) =>
               getSeriesConfig(run, i, jsonData, "rear", undefined, true),
             )}
@@ -127,7 +128,7 @@ export function DisplacementSection({
           />
 
           <ReboundCompressionPlot
-            title="Front Suspension"
+            title="Front Suspension Speed"
             series={selected.map((run, i) =>
               getSeriesConfig(run, i, jsonData, "front", undefined, true),
             )}
@@ -138,7 +139,7 @@ export function DisplacementSection({
           />
 
           <ReboundCompressionPlot
-            title="Rear Suspension"
+            title="Rear Suspension Speed"
             series={selected.map((run, i) =>
               getSeriesConfig(run, i, jsonData, "rear", undefined, true),
             )}
@@ -153,30 +154,30 @@ export function DisplacementSection({
         !firstData.error && (
           <div className="grid grid-cols-1 gap-6">
             <DisplacementPlot
-              title="Suspension Displacement"
+              title="Suspension Travel"
               series={[
                 getSeriesConfig(
                   first,
                   0,
                   jsonData,
                   "front",
-                  "Front Fork",
+                  "Front Suspension",
                   true,
                 ),
-                getSeriesConfig(first, 1, jsonData, "rear", "Rear Shock", true),
+                getSeriesConfig(first, 1, jsonData, "rear", "Rear Suspension", true),
               ]}
               highlight={highlight}
             />
 
             <ReboundCompressionPlot
-              title="Front Suspension"
+              title="Front Suspension Speed"
               series={[
                 getSeriesConfig(
                   first,
                   0,
                   jsonData,
                   "front",
-                  "Front Fork",
+                  "Front Suspension",
                 ),
               ]}
               speedRegion={{ low: 50, high: 150 }}
@@ -186,14 +187,14 @@ export function DisplacementSection({
             />
 
             <ReboundCompressionPlot
-              title="Rear Suspension"
+              title="Rear Suspension Speed"
               series={[
                 getSeriesConfig(
                   first,
                   1,
                   jsonData,
                   "rear",
-                  "Rear Shock",
+                  "Rear Suspension",
                 ),
               ]}
               speedRegion={{ low: 50, high: 150 }}
@@ -208,7 +209,7 @@ export function DisplacementSection({
   );
 }
 
-// ---------------------- Histogram Plot ----------------------
+// ---------------------- Histogram Plots ----------------------
 export function HistogramSection({
   selected,
   jsonData,
@@ -259,7 +260,7 @@ export function HistogramSection({
     if (!data || data.error) {
       return (
         <section>
-          <SectionHeader>Travel Histogram</SectionHeader>
+          <SectionHeader>Histogram Plots</SectionHeader>
           <div className="p-4 text-gray-400 italic">
             No histogram data available
           </div>
@@ -269,25 +270,32 @@ export function HistogramSection({
 
     return (
       <section>
-        <SectionHeader>Travel Histogram</SectionHeader>
-        <div className="w-full md:w-1/2">
+        <SectionHeader>Histogram Plots</SectionHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           <TravelHistogram
             title="Suspension Travel"
             series={[
               {
-                label: "Front Fork",
+                label: "Front Suspension",
                 rawData: frontSeries[0]?.rawData ?? [],
                 fillColor: getSeriesColor(0),
                 min: frontSeries[0]?.min,
                 max: frontSeries[0]?.max,
               },
               {
-                label: "Rear Shock",
+                label: "Rear Suspension",
                 rawData: rearSeries[0]?.rawData ?? [],
                 fillColor: getSeriesColor(1),
                 min: rearSeries[0]?.min,
                 max: rearSeries[0]?.max,
               },
+            ]}
+          />
+          <VelocityHistogram
+            title="Suspension Speed"
+            series={[
+              getSeriesConfig(singleRun, 0, jsonData, "front", "Front Suspension"),
+              getSeriesConfig(singleRun, 1, jsonData, "rear", "Rear Suspension"),
             ]}
           />
         </div>
@@ -297,16 +305,30 @@ export function HistogramSection({
 
   return (
     <section>
-      <SectionHeader>Travel Histogram</SectionHeader>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+      <SectionHeader>Histogram Plots</SectionHeader>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6">
         <TravelHistogram
-          title="Front Fork Comparison"
+          title="Front Suspension Travel"
           series={frontSeries}
         />
         <TravelHistogram
-          title="Rear Shock Comparison"
+          title="Rear Suspension Travel"
           series={rearSeries}
         />
+        
+        <VelocityHistogram
+          title="Front Suspension Speed"
+          series={selected.map((run, i) =>
+            getSeriesConfig(run, i, jsonData, "front"),
+          )}
+        />
+        <VelocityHistogram
+            title="Rear Suspension Speed"
+            series={selected.map((run, i) =>
+              getSeriesConfig(run, i, jsonData, "rear"),
+            )}
+        />
+
       </div>
     </section>
   );
