@@ -24,7 +24,7 @@ interface VelocityReading {
   }
 }
 
-interface SuspensionActivity extends VelocityReading {
+export interface SuspensionActivity extends VelocityReading {
   type: "rebound" | "compression"
 }
 

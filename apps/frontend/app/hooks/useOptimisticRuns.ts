@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Run } from "@repo/database";
 import { Profile } from "app/components/profiles/profileRow";
+import { RunUpdatePayload } from 'app/api/runs';
 
 export function useOptimisticRuns(initialRuns: Run[]) {
   const queryClient = useQueryClient();
@@ -41,7 +42,7 @@ export function useOptimisticRuns(initialRuns: Run[]) {
     queryClient.invalidateQueries({ queryKey: ['runs'] });
   }, [queryClient]);
 
-  const handleRunUpdate = useCallback((id: number, updates: Partial<Pick<Run, 'comments' | 'length' | 'location'>>) => {
+  const handleRunUpdate = useCallback((id: number, updates: RunUpdatePayload) => {
     setRuns((prevRuns) => prevRuns.map((run) => (run.id === id ? { ...run, ...updates } : run)));
     queryClient.invalidateQueries({ queryKey: ['runs'] });
   }, [queryClient]);

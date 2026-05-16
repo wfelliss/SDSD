@@ -200,18 +200,22 @@ async function seed() {
   ];
 
   for (const runItem of initialRuns) {
+    const runLength = Number.isFinite(runItem.length) ? runItem.length : 0;
+    const upperBoundIdx = Math.max(runLength - 1, 0);
     await db
       .insert(runs)
       .values({
         srcPath: runItem.srcPath,
         title: runItem.title ?? null,
         comments: runItem.comments ?? null,
-        length: Number.isFinite(runItem.length) ? runItem.length : 0,
+        length: runLength,
         date: runItem.date ? new Date(runItem.date) : new Date(),
         location: runItem.location ?? null,
         profile: runItem.profile ?? null,
         front_freq: runItem.front_freq ?? 250,
         rear_freq: runItem.rear_freq ?? 250,
+        lower_bound_idx: 0,
+        upper_bound_idx: upperBoundIdx,
         createdAt: runItem.createdAt ? new Date(runItem.createdAt) : new Date(),
       })
       .onConflictDoUpdate({
@@ -219,12 +223,14 @@ async function seed() {
         set: {
           title: runItem.title ?? null,
           comments: runItem.comments ?? null,
-          length: Number.isFinite(runItem.length) ? runItem.length : 0,
+          length: runLength,
           date: runItem.date ? new Date(runItem.date) : new Date(),
           location: runItem.location ?? null,
           profile: runItem.profile ?? null,
           front_freq: runItem.front_freq ?? 250,
           rear_freq: runItem.rear_freq ?? 250,
+          lower_bound_idx: 0,
+          upper_bound_idx: upperBoundIdx,
           createdAt: runItem.createdAt
             ? new Date(runItem.createdAt)
             : new Date(),

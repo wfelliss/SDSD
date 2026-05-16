@@ -18,6 +18,13 @@
     --muted-foreground: 240 5% 64.9%;
     --border: 240 3.7% 15.9%;
   }
+
+  button:not(:disabled) {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
 }
 
 @theme {
