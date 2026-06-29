@@ -48,7 +48,7 @@ export const runs = pgTable("runs", {
   location: varchar("location", { length: 255 }), // place or tag for run
   profile: integer("profile").references(() => profiles.id), // associated profile
   lower_bound_idx: integer("lower_bound_idx").notNull().default(0), // inclusive trim start index (default: 0)
-  upper_bound_idx: integer("upper_bound_idx").notNull(), // inclusive trim end index (set by service layer to length-1)
+  upper_bound_idx: integer("upper_bound_idx"), // inclusive trim end index (set by service layer to length-1)
   front_freq: integer("front_freq"),     // front suspension sample frequency
   rear_freq: integer("rear_freq"),       // rear suspension sample frequency
   createdAt: timestamp("created_at").defaultNow(),
