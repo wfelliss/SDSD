@@ -28,6 +28,52 @@ export interface SuspensionActivity extends VelocityReading {
   type: "rebound" | "compression"
 }
 
+// Low-activity threshold fractions, expressed relative to the suspension's full travel.
+export const MIN_VELOCITY_TRAVEL_FRACTION = 0.4 // 40% of full travel, used as mm/s
+export const MIN_DISPLACEMENT_TRAVEL_FRACTION = 0.03 // 3% of full travel, in mm
+
+interface VelocityDisplacement {
+  velocity: number // mm/s
+  displacement: number // mm of movement
+}
+
+// Removes statistical outliers (>5 std dev) and low-activity events (slow AND
+// small relative to full travel) from velocity/displacement data.
+export function filterLowActivityOutliers<T extends VelocityDisplacement>(
+  items: T[],
+  fullTravel: number,
+): T[] {
+  if (items.length === 0) return items
+
+  const velocities = items.map((a) => a.velocity)
+  const displacements = items.map((a) => a.displacement)
+
+  const mean = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length
+  const std = (arr: number[], m: number) =>
+    Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length)
+
+  const vMean = mean(velocities)
+  const vStd = std(velocities, vMean)
+  const dMean = mean(displacements)
+  const dStd = std(displacements, dMean)
+
+  const minVelocity = MIN_VELOCITY_TRAVEL_FRACTION * fullTravel
+  const minDisplacement = MIN_DISPLACEMENT_TRAVEL_FRACTION * fullTravel
+
+  return items.filter((a) => {
+    const passesStdDev =
+      Math.abs(a.velocity - vMean) < 5 * vStd &&
+      Math.abs(a.displacement - dMean) < 5 * dStd
+
+    // Drop only low-activity points: slow AND small relative to full travel.
+    const isLowActivity =
+      Math.abs(a.velocity) < minVelocity &&
+      Math.abs(a.displacement) < minDisplacement
+
+    return passesStdDev && !isLowActivity
+  })
+}
+
 function convertDisplacementToMm(reading: RawReading, suspensionLength: number, min: number, max: number): Reading {
 
   const displacementPercentage = (reading.displacement - min) / (max - min)

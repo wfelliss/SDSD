@@ -16,15 +16,6 @@ export interface NormalizedPoint {
   y: number;
 }
 
-export interface VelocitySample {
-  index: number;
-  time: number;
-  displacement: number;
-  normalized: number;
-  velocity: number;
-  speed: number;
-}
-
 export interface LinePoint {
   x: number;
   y: number;
@@ -220,45 +211,6 @@ export function calculateMovingAverage(
   return result;
 }
 
-
-// Velocity samples (mm/s) derived from displacement time-series.
-export function buildVelocitySamples(
-  dataArr: RawSuspensionData[],
-  freq: number,
-  min?: number,
-  max?: number,
-): VelocitySample[] {
-  const cleanData = standardizeData(dataArr, freq);
-  if (cleanData.length < 2) return [];
-
-  const samples: VelocitySample[] = [];
-
-  for (let i = 1; i < cleanData.length; i++) {
-    const prev = cleanData[i - 1];
-    const curr = cleanData[i];
-    if (!prev || !curr) continue;
-
-    const dt = curr.time - prev.time;
-    if (!Number.isFinite(dt) || dt <= 0) continue;
-
-    const displacement = curr.val;
-    const velocity = (curr.val - prev.val) / dt;
-    if (!Number.isFinite(velocity)) continue;
-
-    const normalized = normalizeToPercentage(displacement, min, max);
-
-    samples.push({
-      index: i,
-      time: curr.time,
-      displacement,
-      normalized,
-      velocity,
-      speed: Math.abs(velocity),
-    });
-  }
-
-  return samples;
-}
 
 export function fitLine(
   points: LinePoint[],
