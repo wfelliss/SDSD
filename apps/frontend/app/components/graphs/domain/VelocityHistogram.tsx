@@ -26,16 +26,41 @@ interface VelocityHistogramProps {
   height?: number;
 }
 
+// Cache filtered velocities keyed by the stable rawData array reference, so the
+// heavy processCompressions + filtering work is not repeated on every render.
+const velocityCache = new WeakMap<
+  RawSuspensionData[],
+  {
+    freq: number;
+    length: number;
+    min: number;
+    max: number;
+    result: number[];
+  }
+>();
+
 // Builds the same stroke-velocity points (mm/s) the speed scatter plots use,
 // so the histogram is a distribution view of identical, identically-filtered data.
 function buildFilteredVelocities(seriesItem: VelocityHistogramSeries): number[] {
   const length = seriesItem.length ?? 220;
   const min = seriesItem.min ?? 0;
   const max = seriesItem.max ?? 4096;
+  const freq = seriesItem.freq;
+
+  const cached = velocityCache.get(seriesItem.rawData);
+  if (
+    cached &&
+    cached.freq === freq &&
+    cached.length === length &&
+    cached.min === min &&
+    cached.max === max
+  ) {
+    return cached.result;
+  }
 
   const activities = processCompressions(
     seriesItem.rawData,
-    seriesItem.freq,
+    freq,
     length,
     min,
     max,
@@ -54,7 +79,9 @@ function buildFilteredVelocities(seriesItem: VelocityHistogramSeries): number[] 
     ),
   ];
 
-  return kept.map((a) => a.velocity);
+  const result = kept.map((a) => a.velocity);
+  velocityCache.set(seriesItem.rawData, { freq, length, min, max, result });
+  return result;
 }
 
 // Renders a histogram of suspension stroke speeds (mm/s)

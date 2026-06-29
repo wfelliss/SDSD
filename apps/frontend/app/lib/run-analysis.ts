@@ -62,8 +62,8 @@ export function filterLowActivityOutliers<T extends VelocityDisplacement>(
 
   return items.filter((a) => {
     const passesStdDev =
-      Math.abs(a.velocity - vMean) < 5 * vStd &&
-      Math.abs(a.displacement - dMean) < 5 * dStd
+      (vStd === 0 || Math.abs(a.velocity - vMean) < 5 * vStd) &&
+      (dStd === 0 || Math.abs(a.displacement - dMean) < 5 * dStd)
 
     // Drop only low-activity points: slow AND small relative to full travel.
     const isLowActivity =
