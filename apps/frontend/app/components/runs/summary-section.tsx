@@ -32,7 +32,7 @@ function getComponentRecommendations(
     if (bottomOutCount > BOTTOM_OUT_COUNT_THRESHOLD) {
       items.push(`${sagWarning}Add a volume spacer (${bottomOutCount} bottom-outs)`);
     } else if (bottomOutCount === 0 && maxTravel !== null && maxTravel < BOTTOM_OUT_TRAVEL_MIN) {
-      items.push(`${sagWarning}Remove volume spacer (never reached travel)`);
+      items.push(`${sagWarning}Remove volume spacer (never reached full travel)`);
     }
   }
 

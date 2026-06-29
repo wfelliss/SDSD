@@ -12,6 +12,7 @@ import {
 } from "app/lib/telemetryUtils";
 import {
   processCompressions,
+  filterLowActivityOutliers,
   SuspensionActivity,
 } from "app/lib/run-analysis";
 import { getSeriesColor } from "app/lib/graphColors";
@@ -77,30 +78,6 @@ type PreparedSeries = {
 
 const flipY = (pt: LinePoint): LinePoint => ({ x: pt.x, y: Math.abs(pt.y) });
 
-function filterOutliers(
-  suspensionActivity: SuspensionActivity[],
-): SuspensionActivity[] {
-  if (suspensionActivity.length === 0) return suspensionActivity;
-
-  const velocities = suspensionActivity.map((a) => a.velocity);
-  const displacements = suspensionActivity.map((a) => a.displacement);
-
-  const mean = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
-  const std = (arr: number[], m: number) =>
-    Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
-
-  const vMean = mean(velocities);
-  const vStd = std(velocities, vMean);
-  const dMean = mean(displacements);
-  const dStd = std(displacements, dMean);
-
-  return suspensionActivity.filter(
-    (a) =>
-      Math.abs(a.velocity - vMean) < 5 * vStd &&
-      Math.abs(a.displacement - dMean) < 5 * dStd,
-  );
-}
-
 export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
   title,
   series,
@@ -127,11 +104,13 @@ export const ReboundCompressionPlot: React.FC<ReboundCompressionPlotProps> = ({
         y: a.displacement,
       });
 
-      const compressions = filterOutliers(
+      const compressions = filterLowActivityOutliers(
         activities.filter((a) => a.type === "compression"),
+        length,
       );
-      const rebounds = filterOutliers(
+      const rebounds = filterLowActivityOutliers(
         activities.filter((a) => a.type === "rebound"),
+        length,
       );
 
       const compressionPoints = compressions.map(toPoint);
