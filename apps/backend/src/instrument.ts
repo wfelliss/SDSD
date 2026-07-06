@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/nestjs";
 // runs under Bun, so OpenTelemetry auto-instrumentation is limited —
 // error capture and manual spans work, automatic http/db spans may not.
 Sentry.init({
-  debug: true,
+  debug: process.env.NODE_ENV === "development",
   dsn: process.env.SENTRY_DSN,
   environment: process.env.SENTRY_ENVIRONMENT ?? "production",
   release: process.env.SENTRY_RELEASE,
