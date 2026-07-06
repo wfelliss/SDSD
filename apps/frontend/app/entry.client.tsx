@@ -6,14 +6,10 @@ import { hydrateRoot } from "react-dom/client";
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   environment: import.meta.env.MODE,
-  integrations: [
-    Sentry.reactRouterTracingIntegration(),
-    Sentry.replayIntegration(),
-  ],
-  // Lower to 0.1–0.2 once traffic grows
-  tracesSampleRate: 1.0,
-  // Propagate traces to same-origin requests (the /api proxy covers the backend)
-  tracePropagationTargets: [/^\//],
+  // Tracing is intentionally disabled for now (no tracesSampleRate) —
+  // errors and replays only. Re-add reactRouterTracingIntegration() and
+  // trace meta-tag injection in entry.server.tsx when enabling it.
+  integrations: [Sentry.replayIntegration()],
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 });

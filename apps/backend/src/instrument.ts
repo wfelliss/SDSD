@@ -9,8 +9,6 @@ Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: process.env.SENTRY_ENVIRONMENT ?? "production",
   release: process.env.SENTRY_RELEASE,
-  // Lower to 0.1–0.2 once traffic grows
-  tracesSampleRate: 1.0,
-
+  // Tracing intentionally disabled for now — errors and logs only
   enableLogs: true,
 });
