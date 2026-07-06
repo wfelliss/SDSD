@@ -1,4 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Logger, HttpException } from '@nestjs/common';
+import { captureException } from '@sentry/nestjs';
 
 @Catch()
 export class BunErrorFilter implements ExceptionFilter {
@@ -17,6 +18,10 @@ export class BunErrorFilter implements ExceptionFilter {
         .json(exception.getResponse());
       return;
     }
+
+    // Expected HttpExceptions were handled above — anything past this point
+    // is an unexpected failure worth reporting to Sentry
+    captureException(exception);
 
     // 🔍 UNWRAP BUN AGGREGATE ERRORS
     if (exception instanceof AggregateError || exception.name === 'AggregateError') {
