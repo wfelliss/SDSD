@@ -1,3 +1,6 @@
+// Sentry must be initialised before NestJS or any other import
+import "./instrument";
+
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { BunErrorFilter } from "./bun-error.filter";
@@ -6,6 +9,9 @@ import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Flush pending Sentry events on SIGTERM/SIGINT
+  app.enableShutdownHooks();
 
   // 1. Enable CORS for local, Railway-default, and custom domains
   app.enableCors({
