@@ -16,6 +16,7 @@
     "@react-router/node": "^7.13.0",
     "@react-router/serve": "^7.13.0",
     "@repo/database": "*",
+    "@sentry/react-router": "^10.63.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.16",
